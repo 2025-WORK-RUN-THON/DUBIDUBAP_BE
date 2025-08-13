@@ -1,0 +1,64 @@
+# OS
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+.Spotlight-V100
+.Trashes
+._*
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+.factorypath
+
+# Java/Gradle
+.gradle/
+build/
+out/
+bin/
+target/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Logs & temp
+logs/
+*.log
+*.log.*
+*.tmp
+tmp/
+*.swp
+
+# Coverage/Reports
+coverage/
+.jacoco/
+jacoco.exec
+build/reports/
+
+# Docker & env
+.docker/
+.env
+*.env
+.env.*
+!.env.example
+docker-compose.override.yml
+
+# Local Spring config (keep prod/dev in repo)
+application-local.yml
+application-*.local.yml
+application-local.properties
+application-*.local.properties
+
+# JVM
+*.class
+hs_err_pid*
+replay_pid*
+
+

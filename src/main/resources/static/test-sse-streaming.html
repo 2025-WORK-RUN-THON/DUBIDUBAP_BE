@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Divary SSE 스트리밍 테스트</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .test-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fafafa;
+      }
+
+      .test-section h3 {
+        color: #555;
+        margin-top: 0;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #666;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+
+      input[type="file"] {
+        padding: 3px;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-weight: bold;
+      }
+
+      .status.disconnected {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f1b2b7;
+      }
+
+      .status.connecting {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+
+      .status.connected {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f1b2b7;
+      }
+
+      .message-area {
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        min-height: 300px;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 15px;
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .event-message {
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 4px;
+      }
+
+      .event-stream_start {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+      }
+
+      .event-message_chunk {
+        background: #f3e5f5;
+        border-left: 4px solid #9c27b0;
+      }
+
+      .event-stream_complete {
+        background: #e8f5e8;
+        border-left: 4px solid #4caf50;
+      }
+
+      .event-stream_error {
+        background: #ffebee;
+        border-left: 4px solid #f44336;
+      }
+
+      .event-system {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+      }
+
+      .timestamp {
+        color: #666;
+        font-size: 10px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-item {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .accumulated-message {
+        background: #e8f5e8;
+        border: 1px solid #4caf50;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 15px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .ios-simulation {
+        background: #f0f8ff;
+        border: 1px solid #4169e1;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 15px;
+      }
+
+      .ios-simulation h4 {
+        color: #4169e1;
+        margin: 0 0 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Divary SSE 채팅 스트리밍 테스트</h1>
+
+      <!-- 연결 상태 -->
+      <div id="status" class="status disconnected">연결 안됨</div>
+
+      <!-- 통계 -->
+      <div class="stats">
+        <div class="stat-item">
+          <div id="connectionCount" class="stat-value">0</div>
+          <div class="stat-label">연결 수</div>
+        </div>
+        <div class="stat-item">
+          <div id="messageCount" class="stat-value">0</div>
+          <div class="stat-label">메시지 수</div>
+        </div>
+        <div class="stat-item">
+          <div id="chunkCount" class="stat-value">0</div>
+          <div class="stat-label">청크 수</div>
+        </div>
+        <div class="stat-item">
+          <div id="characterCount" class="stat-value">0</div>
+          <div class="stat-label">문자 수</div>
+        </div>
+      </div>
+
+      <!-- iOS 시뮬레이션 정보 -->
+      <div class="ios-simulation">
+        <h4>iOS EventSource 호환성 테스트</h4>
+        <p>이 테스트는 iOS Safari EventSource API와 동일한 방식으로 작동합니다.</p>
+      </div>
+
+      <!-- 테스트 폼 -->
+      <div class="test-section">
+        <h3>메시지 전송 테스트</h3>
+        <div class="form-group">
+          <label for="message">메시지:</label>
+          <textarea id="message" placeholder="테스트할 메시지를 입력하세요...">안녕하세요! iOS SSE 스트리밍 테스트입니다.</textarea>
+        </div>
+        <div class="form-group">
+          <label for="chatRoomId">채팅방 ID (선택사항):</label>
+          <input type="number" id="chatRoomId" placeholder="기존 채팅방 ID (비워두면 새 채팅방 생성)" />
+        </div>
+        <div class="form-group">
+          <label for="imageFile">이미지 파일 (선택사항):</label>
+          <input type="file" id="imageFile" accept="image/*" />
+        </div>
+        <button id="connectBtn" onclick="startStreaming()">스트리밍 시작</button>
+        <button id="disconnectBtn" onclick="stopStreaming()" disabled>연결 종료</button>
+        <button onclick="clearLog()">로그 지우기</button>
+      </div>
+
+      <!-- 실시간 메시지 표시 -->
+      <div class="test-section">
+        <h3>누적 메시지</h3>
+        <div id="accumulatedMessage" class="accumulated-message">스트리밍 시작 후 여기에 실시간으로 메시지가 표시됩니다...</div>
+      </div>
+
+      <!-- 이벤트 로그 -->
+      <div class="test-section">
+        <h3>이벤트 로그</h3>
+        <div id="messageArea" class="message-area">
+          <div class="event-message event-system">
+            <div class="timestamp">[시스템]</div>
+            <div>테스트 페이지가 로드되었습니다. 위의 폼에서 메시지를 입력하고 '스트리밍 시작' 버튼을 클릭하세요.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 전역 변수
+      let eventSource = null;
+      let connectionCount = 0;
+      let messageCount = 0;
+      let chunkCount = 0;
+      let characterCount = 0;
+      let accumulatedContent = "";
+      let TEST_JWT_TOKEN = null;
+
+      // 테스트 시나리오별 메시지
+      const TEST_MESSAGES = {
+        new: "iOS에서 고정 JWT로 새 채팅방 SSE 테스트",
+      };
+
+      async function getValidJWTToken() {
+        try {
+          // 1단계: 테스트 유저 생성/확인
+          const userResponse = await fetch("/api/v1/system/test-user?email=test@divary.com", {
+            method: "POST",
+          });
+
+          if (!userResponse.ok) {
+            throw new Error(`테스트 유저 생성 실패: ${userResponse.status}`);
+          }
+
+          const userResult = await userResponse.text();
+          addMessage("system", `테스트 유저: ${userResult}`);
+
+          // 2단계: 실제 JWT 토큰 발급
+          const tokenResponse = await fetch("/api/v1/system/test-token?email=test@divary.com", {
+            method: "POST",
+          });
+
+          if (!tokenResponse.ok) {
+            throw new Error(`토큰 발급 실패: ${response.status}`);
+          }
+
+          const tokenData = await tokenResponse.json();
+
+          // ApiResponse<String> 형식 처리
+          if (tokenData.success && tokenData.data) {
+            TEST_JWT_TOKEN = tokenData.data;
+            addMessage("system", "실제 JWT 토큰 발급 완료");
+            return true;
+          } else if (tokenData.code === "SUCCESS" && tokenData.data) {
+            // 대안 형식 처리
+            TEST_JWT_TOKEN = tokenData.data;
+            addMessage("system", "실제 JWT 토큰 발급 완료");
+            return true;
+          } else {
+            throw new Error(`토큰 응답 형식 오류: ${JSON.stringify(tokenData)}`);
+          }
+        } catch (error) {
+          addMessage("system", `JWT 토큰 발급 실패: ${error.message}`, true);
+          return false;
+        }
+      }
+
+      function updateStatus(status, message) {
+        const statusEl = document.getElementById("status");
+        statusEl.className = `status ${status}`;
+        statusEl.textContent = message;
+      }
+
+      function updateStats() {
+        document.getElementById("connectionCount").textContent = connectionCount;
+        document.getElementById("messageCount").textContent = messageCount;
+        document.getElementById("chunkCount").textContent = chunkCount;
+        document.getElementById("characterCount").textContent = characterCount;
+      }
+
+      function addMessage(type, data, isError = false) {
+        const messageArea = document.getElementById("messageArea");
+        const messageEl = document.createElement("div");
+        messageEl.className = `event-message event-${type}`;
+
+        const timestamp = new Date().toLocaleTimeString();
+        let content = "";
+
+        if (typeof data === "string") {
+          content = data;
+        } else {
+          content = JSON.stringify(data, null, 2);
+        }
+
+        messageEl.innerHTML = `<div class="timestamp">[${timestamp}] ${type.toUpperCase()}</div>
+                <div>${content}</div>`;
+
+        messageArea.appendChild(messageEl);
+        messageArea.scrollTop = messageArea.scrollHeight;
+      }
+
+      function updateAccumulatedMessage(content) {
+        accumulatedContent = content;
+        document.getElementById("accumulatedMessage").textContent = content;
+        characterCount = content.length;
+        updateStats();
+      }
+
+      async function startStreaming() {
+        if (eventSource) {
+          stopStreaming();
+        }
+
+        // JWT 토큰이 없으면 먼저 발급받기
+        if (!TEST_JWT_TOKEN) {
+          updateStatus("connecting", "JWT 토큰 발급 중...");
+          const tokenSuccess = await getValidJWTToken();
+          if (!tokenSuccess) {
+            updateStatus("error", "JWT 토큰 발급 실패");
+            return;
+          }
+        }
+
+        const message = document.getElementById("message").value;
+        const chatRoomIdInput = document.getElementById("chatRoomId").value;
+        const scenario = document.getElementById("testScenario").value;
+        const imageInput = document.getElementById("imageFile");
+
+        // 시나리오에 따른 메시지 설정
+        const testMessage = message || TEST_MESSAGES[scenario];
+        const chatRoomId = scenario === "existing" && !chatRoomIdInput ? 1 : chatRoomIdInput;
+
+        if (!testMessage.trim()) {
+          alert("메시지를 입력해주세요.");
+          return;
+        }
+
+        // FormData 생성
+        const formData = new FormData();
+        formData.append("message", testMessage);
+        if (chatRoomId) {
+          formData.append("chatRoomId", chatRoomId);
+        }
+        // 이미지 파일 추가
+        if (imageInput.files.length > 0) {
+          formData.append("image", imageInput.files[0]);
+        }
+
+        // UI 상태 업데이트
+        updateStatus("connecting", "연결 중...");
+        document.getElementById("connectBtn").disabled = true;
+        document.getElementById("disconnectBtn").disabled = false;
+
+        // 초기화
+        accumulatedContent = "";
+        chunkCount = 0;
+        characterCount = 0;
+        updateAccumulatedMessage("");
+
+        addMessage("system", `스트리밍 시작: ${testMessage.substring(0, 50)}${testMessage.length > 50 ? "..." : ""}`);
+
+        // FormData를 서버에 POST 요청으로 전송
+        fetch("/api/v1/chatrooms/stream", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${TEST_JWT_TOKEN}`,
+            Accept: "text/event-stream",
+            "Cache-Control": "no-cache",
+            "User-Agent": "DivaryApp/1.0 (iOS; iPhone14,2; iOS 17.0)", // iOS 시뮬레이션
+            "X-Requested-With": "EventSource",
+            Origin: "divary://app",
+          },
+          body: formData,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            if (!response.body) {
+              throw new Error("ReadableStream not supported");
+            }
+
+            updateStatus("connected", "스트리밍 연결됨");
+            connectionCount++;
+            messageCount++;
+            updateStats();
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = ""; // SSE 이벤트 버퍼
+
+            function readStream() {
+              reader
+                .read()
+                .then(({ value, done }) => {
+                  if (done) {
+                    addMessage("system", "스트림이 완료되었습니다.");
+                    stopStreaming();
+                    return;
+                  }
+
+                  const chunk = decoder.decode(value, { stream: true });
+
+                  // 버퍼에 청크 추가
+                  buffer += chunk;
+
+                  // 완전한 SSE 이벤트들을 처리
+                  processSSEBuffer();
+                  readStream();
+                })
+                .catch((error) => {
+                  addMessage("stream_error", `스트림 읽기 오류: ${error.message}`, true);
+                  stopStreaming();
+                });
+            }
+
+            function processSSEBuffer() {
+              // SSE 이벤트는 빈 라인으로 구분됨
+              const events = buffer.split("\n\n");
+
+              // 마지막 이벤트는 불완전할 수 있으므로 버퍼에 보관
+              buffer = events.pop() || "";
+
+              events.forEach((event) => {
+                if (event.trim()) {
+                  processSSEChunk(event);
+                }
+              });
+            }
+
+            readStream();
+          })
+          .catch((error) => {
+            addMessage("stream_error", `연결 오류: ${error.message}`, true);
+            updateStatus("error", `연결 실패: ${error.message}`);
+            stopStreaming();
+          });
+      }
+
+      function processSSEChunk(chunk) {
+        const lines = chunk.split("\n");
+
+        for (let line of lines) {
+          line = line.trim();
+
+          // SSE 표준 형식: "data: {json}" 또는 "data:{json}"
+          if (line.startsWith("data:")) {
+            try {
+              // "data:" 이후의 모든 내용을 가져와서 앞뒤 공백 제거
+              const dataStr = line.substring(5).trim();
+              if (!dataStr) continue;
+
+              const eventData = JSON.parse(dataStr);
+              handleSSEEvent(eventData);
+            } catch (e) {
+              console.warn("JSON 파싱 실패:", line, e);
+            }
+          }
+          // 이벤트 타입 라인: "event: message_chunk"
+          else if (line.startsWith("event:")) {
+            const eventType = line.substring(6).trim();
+          }
+          // 빈 라인이나 다른 SSE 메타데이터는 무시
+        }
+      }
+
+      function handleSSEEvent(eventData) {
+        const eventType = eventData.eventType || "unknown";
+
+        switch (eventType) {
+          case "stream_start":
+            addMessage("stream_start", `스트림 시작 - 연결 ID: ${eventData.connectionId}`);
+            break;
+
+          case "message_chunk":
+            if (eventData.chunk && eventData.chunk.content) {
+              chunkCount++;
+              const content = eventData.message.accumulated;
+              updateAccumulatedMessage(content);
+
+              addMessage("message_chunk", `청크 ${eventData.chunk.index}: "${eventData.chunk.content}" (총 ${content.length}자)`);
+            }
+            break;
+
+          case "stream_complete":
+            if (eventData.finalMessage) {
+              addMessage("stream_complete", `완료 - 총 청크: ${eventData.finalMessage.totalChunks}, 단어: ${eventData.finalMessage.wordCount}`);
+            }
+            stopStreaming();
+            break;
+
+          case "stream_error":
+            const retryable = eventData.error.retryable !== undefined ? eventData.error.retryable : "N/A";
+            addMessage("stream_error", `오류: ${eventData.error.message} (재시도 가능: ${retryable})`, true);
+            updateStatus("error", `스트림 오류: ${eventData.error.type}`);
+            break;
+
+          default:
+            addMessage("system", `알 수 없는 이벤트: ${eventType}`);
+        }
+      }
+
+      function stopStreaming() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+
+        updateStatus("disconnected", "연결 종료됨");
+        document.getElementById("connectBtn").disabled = false;
+        document.getElementById("disconnectBtn").disabled = true;
+      }
+
+      function clearLog() {
+        document.getElementById("messageArea").innerHTML =
+          '<div class="event-message event-system"><div class="timestamp">[시스템]</div><div>로그가 지워졌습니다.</div></div>';
+        updateAccumulatedMessage("스트리밍 시작 후 여기에 실시간으로 메시지가 표시됩니다...");
+
+        // 통계 초기화 (연결 수 제외)
+        messageCount = 0;
+        chunkCount = 0;
+        characterCount = 0;
+        updateStats();
+      }
+
+      // 시나리오 변경 시 메시지 자동 설정
+      document.getElementById("testScenario").addEventListener("change", function () {
+        const scenario = this.value;
+        const messageEl = document.getElementById("message");
+        const chatRoomIdEl = document.getElementById("chatRoomId");
+        const imageFileEl = document.getElementById("imageFile");
+
+        messageEl.value = TEST_MESSAGES[scenario];
+        imageFileEl.value = ""; // 시나리오 변경 시 파일 선택 초기화
+
+        if (scenario === "existing") {
+          chatRoomIdEl.value = "1";
+        } else {
+          chatRoomIdEl.value = "";
+        }
+      });
+
+      // 페이지 로드 시 초기 설정
+      document.addEventListener("DOMContentLoaded", async function () {
+        updateStats();
+        addMessage("system", "테스트 페이지 로드 완료. JWT 토큰을 발급받는 중...");
+
+        // 페이지 로드 시 JWT 토큰 미리 발급
+        const tokenSuccess = await getValidJWTToken();
+        if (tokenSuccess) {
+          addMessage("system", "모든 준비 완료! 스트리밍 테스트를 시작할 수 있습니다.");
+        } else {
+          addMessage("system", "JWT 토큰 발급 실패. 스트리밍 시작 시 다시 시도됩니다.", true);
+        }
+      });
+
+      // 페이지 종료 시 연결 정리
+      window.addEventListener("beforeunload", function () {
+        stopStreaming();
+      });
+    </script>
+  </body>
+</html>

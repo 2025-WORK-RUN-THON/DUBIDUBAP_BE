@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Spring Boot 색깔 컨버터 -->
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
+
+    <!-- 콘솔 출력 (색깔 적용) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level) %clr([%X{traceId:-}]){yellow} %clr(%logger{36}){cyan} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 파일 출력 (색깔 없음 그래야 저장 되는 로그 파일에 색깔 안 들어감) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/divary.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/divary.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-}] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 개발 환경 -->
+    <springProfile name="dev">
+        <root level="WARN">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+        
+        <!-- 내 애플리케이션만 DEBUG (com.divary 패키지 내 로그만 DEBUG 로 출력 한다는 의미) -->
+        <logger name="com.divary" level="DEBUG"/>
+        
+        <!-- SQL 로그만 -->
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+        
+        <!-- 시끄러운 로그들 차단 -->
+        <logger name="org.springframework.web" level="INFO"/>
+        <logger name="com.zaxxer.hikari" level="INFO"/>
+        <logger name="org.springframework.orm.jpa" level="INFO"/>
+        <logger name="org.hibernate" level="INFO"/>
+    </springProfile>
+
+    <!-- 운영 환경 -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="FILE"/>
+        </root>
+        <logger name="com.divary" level="INFO"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="com.zaxxer.hikari" level="WARN"/>
+    </springProfile>
+
+</configuration>

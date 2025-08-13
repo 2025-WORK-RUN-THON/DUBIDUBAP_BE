@@ -1,0 +1,74 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.3'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.guineafigma'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-devtools'
+
+	// SpringDoc OpenAPI 3
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+
+    // ModelMapper 제거 (미사용)
+
+	// H2 데이터베이스 (개발/테스트용)
+	runtimeOnly 'com.h2database:h2'
+
+	// MySQL 데이터베이스에 접속하기 위한 JDBC 드라이버 (RDS 연결 시 필수)
+	implementation 'mysql:mysql-connector-java:8.0.33'
+
+	// S3
+	implementation 'software.amazon.awssdk:s3:2.25.57'
+
+	// WebP 이미지 지원 (Java ImageIO 확장)
+	implementation 'com.twelvemonkeys.imageio:imageio-webp:3.10.1'
+
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// WebFlux (WebClient for streaming)
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	
+	// macOS DNS 최적화
+	runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.108.Final:osx-aarch_64'
+
+    //security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    testImplementation 'org.springframework.security:spring-security-test'
+
+	//JWT
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

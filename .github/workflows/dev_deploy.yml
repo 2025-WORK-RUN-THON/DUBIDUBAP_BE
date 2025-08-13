@@ -1,0 +1,116 @@
+name: Divary CI/CD
+
+on:
+  push:
+    branches: [develop, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate application-prod.yml
+        run: |
+          mkdir -p ./src/main/resources
+          cat << 'EOF' > ./src/main/resources/application-prod.yml
+          ${{ secrets.APPLICATION_PROD_YML }}
+          EOF
+        shell: bash
+
+      - name: Grant permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test --build-cache --parallel
+
+      - name: Compress JAR with tar.gz # jar 파일 압축
+        run: |
+          mkdir -p package
+          cp build/libs/*.jar package/
+          tar --use-compress-program="gzip -1" -cf divary-app.tar.gz -C package .
+        shell: bash
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: divary-artifact
+          path: divary-app.tar.gz # 압축된 tar.gz 파일만 업로드
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: divary-artifact
+          path: ./deploy-package
+
+      - name: Deploy to EC2
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          PROD_ENV: ${{ secrets.APPLICATION_PROD_ENV }}
+        run: |
+          cat << KEY_EOF > private_key.pem
+          $EC2_SSH_KEY
+          KEY_EOF
+          chmod 600 private_key.pem
+
+          tar_file=deploy-package/divary-app.tar.gz
+
+          # tar.gz 파일을 EC2로 전송 (압축 전송으로 속도 향상)
+          scp -i private_key.pem -o StrictHostKeyChecking=no -o Compression=yes "$tar_file" $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/divary-app.tar.gz
+
+          # 환경변수 파일 생성 및 전송
+          cat << ENV_EOF > .env
+          $PROD_ENV
+          ENV_EOF
+          scp -i private_key.pem -o StrictHostKeyChecking=no .env $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/.env
+
+          # EC2에서 압축 해제 후 실행
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << EOF
+            set -e
+            cd /home/$EC2_USERNAME
+
+            # 기존 서비스 중지
+            sudo systemctl stop divary || echo "서비스가 이미 중지되어 있습니다"
+
+            # 이전 파일들 정리
+            rm -rf divary-app
+
+            # 새 파일 확인 및 압축 해제
+            if [ ! -f divary-app.tar.gz ]; then
+              echo "Error: divary-app.tar.gz not found"
+              exit 1
+            fi
+
+            mkdir -p divary-app
+            tar -xzf divary-app.tar.gz -C divary-app
+
+            # 새 JAR 파일로 교체
+            cp divary-app/divary-spring-0.0.1-SNAPSHOT.jar divary-app.jar
+
+            # systemd 재시작
+            sudo systemctl daemon-reload
+            sudo systemctl start divary
+            sudo systemctl is-active divary
+
+          EOF
+
+          rm -f private_key.pem .env

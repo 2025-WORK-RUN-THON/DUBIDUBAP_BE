@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Divary Spring Application</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 500px;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 1rem;
+      }
+      .message {
+        color: #666;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+      }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+      .feature {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 5px;
+        border-left: 4px solid #667eea;
+      }
+      .feature h3 {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+      }
+      .feature p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>🌟 Divary Spring</h1>
+      <p class="message" th:text="${message}">환영합니다!</p>
+
+      <div class="features">
+        <div class="feature">
+          <h3>Spring Boot 3.5.3</h3>
+          <p>최신 Spring Boot 프레임워크</p>
+        </div>
+        <div class="feature">
+          <h3>Spring Security</h3>
+          <p>강력한 보안 기능</p>
+        </div>
+        <div class="feature">
+          <h3>JPA & H2</h3>
+          <p>데이터베이스 연동</p>
+        </div>
+        <div class="feature">
+          <h3>Thymeleaf</h3>
+          <p>템플릿 엔진</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 2rem">
+        <p>개발 도구:</p>
+        <a href="/h2-console" target="_blank" style="color: #667eea; text-decoration: none">H2 데이터베이스 콘솔</a>
+      </div>
+    </div>
+  </body>
+</html>

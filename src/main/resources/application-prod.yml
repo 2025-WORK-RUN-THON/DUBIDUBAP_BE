@@ -1,0 +1,76 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:mysql://${DB_HOST:db}:${DB_PORT:3306}/${DB_NAME:guineafigma}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  h2:
+    console:
+      enabled: false
+  thymeleaf:
+    cache: true
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  use-forward-headers: true
+  forward-headers-strategy: framework
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+logging:
+  level:
+    root: INFO
+    com.guineafigma: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+
+springdoc:
+  swagger-ui:
+    use-root-path: true
+    path: /swagger-ui.html
+  api-docs:
+    path: /api/v1/v3/api-docs
+  servers:
+    - url: https://guineafigma.app
+      description: Production server
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    s3:
+      bucket: ${S3_BUCKET}
+    region:
+      static: ${AWS_REGION:ap-northeast-2}
+    stack:
+      auto: false
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    url: https://api.openai.com/v1/chat/completions
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+
+jwt:
+  secretKey: ${JWT_SECRET}
+  expiration:
+    access: ${JWT_EXPIRATION:14400000} # 기본 4시간

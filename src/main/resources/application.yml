@@ -1,0 +1,32 @@
+spring:
+  config:
+    name: application
+
+  application:
+    name: guineafigma-server
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # H2 콘솔 설정 (개발용)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Thymeleaf 설정
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8080
+  # 에러 응답 설정
+  error:
+    include-stacktrace: never
+    include-message: on_param
+    include-binding-errors: on_param
+
+# 로깅 설정
+logging:
+  level:
+    com.guineafigma: DEBUG
