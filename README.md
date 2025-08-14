@@ -37,13 +37,13 @@ docker compose up -d --build
 docker compose down -v
 ```
 
-# 🍃 Divary-Spring 🍃
+# 🍃 Guineafigma-Spring 🍃
 
-다이빙 서포트 앱 Divary의 Spring Boot 3.5.3 기반 백엔드 API 서버입니다.
+guineafigma의 Spring Boot 3.5.3 기반 백엔드 API 서버입니다.
 
 ## 프로젝트 정보
 
-- **프로젝트명**: Divary Spring Boot
+- **프로젝트명**: Guineafigma Spring Boot
 - **Spring Boot 버전**: 3.5.3
 - **Java 버전**: 21
 - **빌드 도구**: Gradle
