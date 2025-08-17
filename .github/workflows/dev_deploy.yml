@@ -35,6 +35,12 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build -x test --build-cache --parallel
 
+      - name: Verify prod config packaged
+        run: |
+          JAR=$(ls -1 build/libs/*-SNAPSHOT.jar | grep -v plain | head -n 1)
+          echo "Checking JAR: $JAR"
+          jar tf "$JAR" | grep -q 'BOOT-INF/classes/application-prod.yml'
+
       - name: Compress JAR with tar.gz # jar 파일 압축
         run: |
           mkdir -p package
@@ -134,7 +140,8 @@ jobs:
             sudo tee /etc/systemd/system/guineafigma.service > /dev/null <<SERVICE
             [Unit]
             Description=Guineafigma Spring Boot Service
-            After=network.target
+            After=network-online.target
+            Wants=network-online.target
 
             [Service]
             User=$U
