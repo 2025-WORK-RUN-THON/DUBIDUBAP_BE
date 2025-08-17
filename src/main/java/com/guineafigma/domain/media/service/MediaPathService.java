@@ -1,10 +1,9 @@
-package com.guineafigma.domain.image.service;
+package com.guineafigma.domain.media.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -15,7 +14,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ImagePathService {
+public class MediaPathService {
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
@@ -24,13 +23,9 @@ public class ImagePathService {
     private String region;
 
     private static Pattern tempUrlPattern = null;
-    
-    private final ImageValidationService imageValidationService;
-
 
     // temp 경로 생성
     public String generateTempPath(Long userId) {
-        imageValidationService.validateUserId(userId);
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String randomId = UUID.randomUUID().toString().substring(0, 8);
         return String.format("users/%d/temp/%s_%s", userId, timestamp, randomId);
@@ -51,7 +46,6 @@ public class ImagePathService {
         return null;
     }
 
-    // S3 이미지 URL 패턴 생성 
     private String getS3ImageUrlPattern(String pathPattern) {
         return String.format(
                 "https://%s\\.s3\\.%s\\.amazonaws\\.com/%s\\.(jpg|jpeg|png|gif|webp)",
@@ -59,18 +53,15 @@ public class ImagePathService {
                 java.util.regex.Pattern.quote(region),
                 pathPattern);
     }
-    
-    // temp 이미지 URL 패턴 생성
+
     public String getTempImageUrlPattern() {
         return getS3ImageUrlPattern("users/\\d+/temp/.*?");
     }
 
-    // 모든 이미지 URL 패턴 생성 (temp + permanent)
     public String getAllImageUrlPattern() {
         return getS3ImageUrlPattern("[^\\\\s\"'<>]+");
     }
 
-    // 본문에서 temp 이미지 URL 패턴 추출
     public List<String> extractTempImageUrls(String content) {
         if (tempUrlPattern == null) {
             String pattern = getTempImageUrlPattern();
@@ -78,21 +69,15 @@ public class ImagePathService {
             tempUrlPattern = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
         }
         
-        log.info("컨텐츠에서 temp URL 추출 시도: {}", content);
-        
         Matcher matcher = tempUrlPattern.matcher(content);
         List<String> tempUrls = new ArrayList<>();
         while (matcher.find()) {
             String foundUrl = matcher.group();
             tempUrls.add(foundUrl);
-            log.info("temp URL 발견: {}", foundUrl);
         }
-        
-        log.info("총 발견된 temp URL 개수: {}", tempUrls.size());
         return tempUrls;
     }
 
-    // 컨텐츠에서 모든 이미지 URL 추출 (temp 이미지뿐만 아니라 permanent 이미지도)
     public List<String> extractAllImageUrls(String content) {
         if (content == null || content.trim().isEmpty()) {
             return new ArrayList<>();
@@ -106,24 +91,12 @@ public class ImagePathService {
         while (matcher.find()) {
             imageUrls.add(matcher.group());
         }
-        
-        log.debug("컨텐츠에서 추출된 이미지 URL 개수: {}", imageUrls.size());
         return imageUrls;
     }
 
-    // 본문의 temp URL을 permanent URL로 교체
-    public String replaceTempUrls(String content, Map<String, String> urlMappings) {
-        String result = content;
-        for (Map.Entry<String, String> entry : urlMappings.entrySet()) {
-            result = result.replace(entry.getKey(), entry.getValue());
-        }
-        return result;
-    }
-
-    // temp 경로 이미지인지 확인
     public boolean isTempImage(String s3Key) {
         return s3Key != null && s3Key.contains("/temp/");
     }
+}
 
-    
-} 
+

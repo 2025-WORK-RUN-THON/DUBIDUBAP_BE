@@ -1,8 +1,8 @@
 package com.guineafigma.domain.user.service;
 
 import com.guineafigma.common.util.EnumValidator;
-import com.guineafigma.domain.image.dto.request.ImageUploadRequest;
-import com.guineafigma.domain.image.service.ImageService;
+import com.guineafigma.domain.media.dto.request.MediaUploadRequest;
+import com.guineafigma.domain.media.service.MediaService;
 import com.guineafigma.domain.user.dto.requestDTO.UserLevelUpdateRequestDTO;
 import com.guineafigma.domain.user.dto.response.UserLicenseImageResponseDTO;
 import com.guineafigma.global.exception.BusinessException;
@@ -20,7 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional
 public class UserServiceImpl implements UserService {
     private final UserRepository memberRepository;
-    private final ImageService imageService;
+    private final MediaService imageService;
     String additionalPath = "qualifications";
 
     @Override
@@ -52,12 +52,12 @@ public class UserServiceImpl implements UserService {
     public UserLicenseImageResponseDTO uploadLicense(MultipartFile image, Long userId) {
         String uploadPath = "users/" + userId + "/license/";
 
-        ImageUploadRequest request = ImageUploadRequest.builder()
+        MediaUploadRequest request = MediaUploadRequest.builder()
                 .file(image)
                 .uploadPath(uploadPath)
                 .build();
 
-        String fileUrl = imageService.uploadImage(request).getFileUrl();
+        String fileUrl = imageService.uploadMedia(request).getFileUrl();
 
 
         return new UserLicenseImageResponseDTO(fileUrl);

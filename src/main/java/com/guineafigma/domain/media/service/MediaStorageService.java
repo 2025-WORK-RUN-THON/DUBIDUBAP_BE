@@ -1,4 +1,4 @@
-package com.guineafigma.domain.image.service;
+package com.guineafigma.domain.media.service;
 
 import com.guineafigma.global.exception.BusinessException;
 import com.guineafigma.global.exception.ErrorCode;
@@ -21,8 +21,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-// 이미지 저장 서비스
-public class ImageStorageService {
+public class MediaStorageService {
 
     private final S3Client s3Client;
     
@@ -32,7 +31,6 @@ public class ImageStorageService {
     @Value("${cloud.aws.region.static}")
     private String region;
 
-    // S3에 파일 업로드
     public void uploadToS3(String s3Key, MultipartFile file) {
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -52,7 +50,6 @@ public class ImageStorageService {
         }
     }
 
-    // S3에서 파일 삭제
     public void deleteFromS3(String s3Key) {
         try {
             s3Client.deleteObject(builder -> builder.bucket(bucketName).key(s3Key));
@@ -63,10 +60,8 @@ public class ImageStorageService {
         }
     }
 
-    // S3에서 파일을 다른 경로로 이동 (복사 + 삭제)
     public void moveFile(String sourceKey, String destinationKey) {
         try {
-            // 1. 파일 복사
             s3Client.copyObject(builder -> builder
                     .sourceBucket(bucketName)
                     .sourceKey(sourceKey)
@@ -75,7 +70,6 @@ public class ImageStorageService {
             );
             log.info("S3 파일 복사 완료: {} -> {}", sourceKey, destinationKey);
             
-            // 2. 복사 성공 확인 후 원본 파일 삭제
             if (verifyFileExists(destinationKey)) {
                 deleteFromS3(sourceKey);
                 log.info("S3 파일 이동 완료: {} -> {}", sourceKey, destinationKey);
@@ -90,7 +84,6 @@ public class ImageStorageService {
         }
     }
 
-    // 파일 존재 확인
     private boolean verifyFileExists(String s3Key) {
         try {
             s3Client.headObject(builder -> builder.bucket(bucketName).key(s3Key));
@@ -100,36 +93,20 @@ public class ImageStorageService {
         }
     }
 
-    // 다중 파일 이동
-    public void moveFiles(List<String> sourceKeys, List<String> destinationKeys) {
-        if (sourceKeys.size() != destinationKeys.size()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-        
-        for (int i = 0; i < sourceKeys.size(); i++) {
-            moveFile(sourceKeys.get(i), destinationKeys.get(i));
-        }
-    }
-
-    // 배치로 파일 삭제
     public void deleteFiles(List<String> s3Keys) {
         for (String s3Key : s3Keys) {
             try {
                 deleteFromS3(s3Key);
             } catch (Exception e) {
                 log.error("배치 삭제 중 실패한 파일: {}", s3Key, e);
-                // 개별 파일 삭제 실패는 로그만 남기고 계속 진행
             }
         }
     }
 
-    // S3 키로부터 Public URL 생성
     public String generatePublicUrl(String s3Key) {
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, s3Key);
     }
 
-
-    // S3 URL에서 S3 키 추출
     public String extractS3KeyFromUrl(String imageUrl) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             throw new BusinessException(ErrorCode.IMAGE_URL_INVALID_FORMAT);
@@ -140,10 +117,8 @@ public class ImageStorageService {
             if (parts.length == 2 && !parts[1].trim().isEmpty()) {
                 return parts[1];
             }
-            
             log.error("S3 URL 형식 오류: {}", imageUrl);
             throw new BusinessException(ErrorCode.IMAGE_URL_INVALID_FORMAT);
-            
         } catch (BusinessException e) {
             throw e; 
         } catch (Exception e) {
@@ -152,20 +127,17 @@ public class ImageStorageService {
         }
     }
 
-    // 고유한 파일명 생성
     public String generateUniqueFileName(String originalFilename) {
         String uuid = UUID.randomUUID().toString();
         String extension = getFileExtension(originalFilename);
         return uuid + (extension.isEmpty() ? "" : "." + extension);
     }
 
-    // S3 키 생성 (경로 + 파일명)
     public String generateS3Key(String uploadPath, String fileName) {
         String normalizedPath = uploadPath.endsWith("/") ? uploadPath : uploadPath + "/";
         return normalizedPath + fileName;
     }
 
-    // S3에서 temp 경로의 모든 파일 목록 조회
     public List<String> listTempFiles(String tempPrefix) {
         try {
             ListObjectsV2Request request = ListObjectsV2Request.builder()
@@ -191,4 +163,6 @@ public class ImageStorageService {
         }
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
-} 
+}
+
+

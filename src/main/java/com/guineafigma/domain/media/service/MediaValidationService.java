@@ -1,6 +1,6 @@
-package com.guineafigma.domain.image.service;
+package com.guineafigma.domain.media.service;
 
-import com.guineafigma.domain.image.dto.request.ImageUploadRequest;
+import com.guineafigma.domain.media.dto.request.MediaUploadRequest;
 import com.guineafigma.global.exception.BusinessException;
 import com.guineafigma.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +13,12 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ImageValidationService {
+public class MediaValidationService {
 
     private static final int MAX_FILES_PER_UPLOAD = 10;
-    private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    private static final long MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 
-    public void validateUploadRequest(ImageUploadRequest request) {
+    public void validateUploadRequest(MediaUploadRequest request) {
         validateFile(request.getFile());
         validateUploadPath(request.getUploadPath());
     }
@@ -45,16 +45,8 @@ public class ImageValidationService {
         }
         
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
+        if (contentType == null || !(contentType.startsWith("image/") || contentType.startsWith("video/") || contentType.startsWith("audio/"))) {
             throw new BusinessException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
-        }
-    }
-
-    
-
-    public void validateUserId(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("사용자 ID는 필수입니다.");
         }
     }
 
@@ -63,9 +55,10 @@ public class ImageValidationService {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR);
         }
         
-        // 경로 보안 검증 (../ 등 상위 디렉토리 접근 차단)
         if (uploadPath.contains("..") || uploadPath.startsWith("/")) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR);
         }
     }
 }
+
+
