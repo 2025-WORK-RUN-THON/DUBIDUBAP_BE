@@ -1,4 +1,4 @@
-name: Divary CI/CD
+name: Guineafigma CI/CD
 
 on:
   push:
@@ -39,14 +39,14 @@ jobs:
         run: |
           mkdir -p package
           cp build/libs/*.jar package/
-          tar --use-compress-program="gzip -1" -cf divary-app.tar.gz -C package .
+          tar --use-compress-program="gzip -1" -cf guineafigma-app.tar.gz -C package .
         shell: bash
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: divary-artifact
-          path: divary-app.tar.gz # 압축된 tar.gz 파일만 업로드
+          name: guineafigma-artifact
+          path: guineafigma-app.tar.gz # 압축된 tar.gz 파일만 업로드
 
   deploy:
     needs: build
@@ -57,7 +57,7 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: divary-artifact
+          name: guineafigma-artifact
           path: ./deploy-package
 
       - name: Deploy to EC2
@@ -72,10 +72,10 @@ jobs:
           KEY_EOF
           chmod 600 private_key.pem
 
-          tar_file=deploy-package/divary-app.tar.gz
+          tar_file=deploy-package/guineafigma-app.tar.gz
 
           # tar.gz 파일을 EC2로 전송 (압축 전송으로 속도 향상)
-          scp -i private_key.pem -o StrictHostKeyChecking=no -o Compression=yes "$tar_file" $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/divary-app.tar.gz
+          scp -i private_key.pem -o StrictHostKeyChecking=no -o Compression=yes "$tar_file" $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/guineafigma-app.tar.gz
 
           # 환경변수 파일 생성 및 전송
           cat << ENV_EOF > .env
@@ -84,37 +84,69 @@ jobs:
           scp -i private_key.pem -o StrictHostKeyChecking=no .env $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/.env
 
           # EC2에서 압축 해제 후 실행
-          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'EOF'
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << EOF
             set -e
-            cd /home/$USER
+            U=$EC2_USERNAME
+            cd /home/$U
 
-            # 기존 서비스 중지
-            sudo systemctl stop divary || echo "서비스가 이미 중지되어 있습니다"
-
-            # 이전 파일들 정리
-            rm -rf divary-app
-
-            # 새 파일 확인 및 압축 해제
-            if [ ! -f divary-app.tar.gz ]; then
-              echo "Error: divary-app.tar.gz not found"
-              exit 1
+            # Java 21 설치 (없으면 설치) - Amazon Linux (dnf/yum) 자동 감지
+            if ! command -v java >/dev/null 2>&1; then
+              if command -v dnf >/dev/null 2>&1; then
+                INSTALL="sudo dnf install -y"
+              elif command -v yum >/dev/null 2>&1; then
+                INSTALL="sudo yum install -y"
+              else
+                INSTALL="sudo apt-get install -y"
+              fi
+              eval "$INSTALL java-21-amazon-corretto" || eval "$INSTALL java-21-openjdk" || eval "$INSTALL java-17-openjdk" || true
             fi
 
-            mkdir -p divary-app
-            tar -xzf divary-app.tar.gz -C divary-app
+            # 기존 서비스 중지 (있을 때만)
+            if systemctl list-units --type=service --all | grep -q '^guineafigma.service'; then
+              sudo systemctl stop guineafigma || true
+            fi
 
-            # 새 JAR 파일로 교체 (가장 최신 jar 한 개를 선택)
-            latest_jar=$(ls -1t divary-app/*.jar | head -n 1)
-            if [ -z "$latest_jar" ]; then
+            # 이전 파일 정리 및 압축 해제
+            rm -rf guineafigma-app
+            if [ ! -f guineafigma-app.tar.gz ]; then
+              echo "Error: guineafigma-app.tar.gz not found"
+              exit 1
+            fi
+            mkdir -p guineafigma-app
+            tar -xzf guineafigma-app.tar.gz -C guineafigma-app
+
+            # 최신 JAR 파일 경로 확인
+            latest_jar=\$(ls -1t guineafigma-app/*.jar | head -n 1)
+            if [ -z "\$latest_jar" ]; then
               echo "Error: No JAR found after extraction"
               exit 1
             fi
-            cp "$latest_jar" divary-app.jar
+            abs_jar="/home/\$U/\$latest_jar"
 
-            # systemd 재시작
+            # systemd 유닛 생성/갱신
+            sudo tee /etc/systemd/system/guineafigma.service > /dev/null <<SERVICE
+            [Unit]
+            Description=Guineafigma Spring Boot Service
+            After=network.target
+
+            [Service]
+            User=\$U
+            WorkingDirectory=/home/\$U
+            EnvironmentFile=/home/\$U/.env
+            ExecStart=/usr/bin/java -jar \$abs_jar
+            Restart=always
+            RestartSec=10
+            SuccessExitStatus=143
+            LimitNOFILE=65536
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICE
+
             sudo systemctl daemon-reload
-            sudo systemctl start divary
-            sudo systemctl is-active divary
+            sudo systemctl enable guineafigma || true
+            sudo systemctl restart guineafigma
+            sudo systemctl --no-pager status guineafigma | sed -n '1,80p'
           EOF
 
           rm -f private_key.pem .env
