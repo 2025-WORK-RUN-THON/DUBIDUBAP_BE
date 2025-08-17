@@ -50,8 +50,8 @@ public class SwaggerConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Divary API")
-                        .description("다이빙 서포트 앱 Divary의 REST API 문서")
+                        .title("Dubidubap API")
+                        .description("로고송 제작 서비스 Dubidubap의 REST API 문서")
                         .version("v1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList("JWT"));
     }
