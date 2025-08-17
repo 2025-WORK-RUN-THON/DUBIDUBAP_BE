@@ -91,10 +91,10 @@ jobs:
           scp -i private_key.pem -o StrictHostKeyChecking=no .env $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/.env
 
           # EC2에서 압축 해제 후 실행
-          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << EOF
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'EOF'
             set -euo pipefail
-            U=$EC2_USERNAME
-            cd /home/$U
+            U="$(whoami)"
+            cd "/home/$U"
 
             # Java 21 설치 (없으면 설치) - Amazon Linux (dnf/yum)
             if ! command -v java >/dev/null 2>&1; then
@@ -123,12 +123,12 @@ jobs:
             tar -xzf guineafigma-app.tar.gz -C guineafigma-app
 
             # 최신 JAR 파일 경로 확인
-            latest_jar=\$(ls -1t guineafigma-app/*.jar 2>/dev/null | head -n 1)
-            if [ -z "\$latest_jar" ]; then
+            latest_jar=$(ls -1t guineafigma-app/*.jar 2>/dev/null | head -n 1)
+            if [ -z "$latest_jar" ]; then
               echo "Error: No JAR found after extraction"
               exit 1
             fi
-            abs_jar="/home/\$U/\$latest_jar"
+            abs_jar="/home/$U/$latest_jar"
 
             # systemd 유닛 생성/갱신
             sudo tee /etc/systemd/system/guineafigma.service > /dev/null <<SERVICE
@@ -137,10 +137,10 @@ jobs:
             After=network.target
 
             [Service]
-            User=\$U
-            WorkingDirectory=/home/\$U
-            EnvironmentFile=/home/\$U/.env
-            ExecStart=/usr/bin/java -jar \$abs_jar
+            User=$U
+            WorkingDirectory=/home/$U
+            EnvironmentFile=/home/$U/.env
+            ExecStart=/usr/bin/java -jar $abs_jar
             Restart=always
             RestartSec=10
             SuccessExitStatus=143
