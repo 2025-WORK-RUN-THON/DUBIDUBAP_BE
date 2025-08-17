@@ -89,16 +89,16 @@ jobs:
             U=$EC2_USERNAME
             cd /home/$U
 
-            # Java 21 설치 (없으면 설치) - Amazon Linux (dnf/yum) 자동 감지
+            # Java 21 설치 (없으면 설치) - Amazon Linux (dnf/yum)
             if ! command -v java >/dev/null 2>&1; then
               if command -v dnf >/dev/null 2>&1; then
-                INSTALL="sudo dnf install -y"
+                sudo dnf install -y java-21-amazon-corretto-headless || sudo dnf install -y java-21-openjdk || true
               elif command -v yum >/dev/null 2>&1; then
-                INSTALL="sudo yum install -y"
+                sudo yum install -y java-21-amazon-corretto-headless || sudo yum install -y java-21-openjdk || true
               else
-                INSTALL="sudo apt-get install -y"
+                echo "No supported package manager found (dnf/yum). Please install Java 21 manually." >&2
+                exit 1
               fi
-              eval "$INSTALL java-21-amazon-corretto" || eval "$INSTALL java-21-openjdk" || eval "$INSTALL java-17-openjdk" || true
             fi
 
             # 기존 서비스 중지 (있을 때만)
