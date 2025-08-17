@@ -84,9 +84,9 @@ jobs:
           scp -i private_key.pem -o StrictHostKeyChecking=no .env $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/.env
 
           # EC2에서 압축 해제 후 실행
-          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << EOF
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'EOF'
             set -e
-            cd /home/$EC2_USERNAME
+            cd /home/$USER
 
             # 기존 서비스 중지
             sudo systemctl stop divary || echo "서비스가 이미 중지되어 있습니다"
@@ -103,14 +103,18 @@ jobs:
             mkdir -p divary-app
             tar -xzf divary-app.tar.gz -C divary-app
 
-            # 새 JAR 파일로 교체
-            cp divary-app/divary-spring-0.0.1-SNAPSHOT.jar divary-app.jar
+            # 새 JAR 파일로 교체 (가장 최신 jar 한 개를 선택)
+            latest_jar=$(ls -1t divary-app/*.jar | head -n 1)
+            if [ -z "$latest_jar" ]; then
+              echo "Error: No JAR found after extraction"
+              exit 1
+            fi
+            cp "$latest_jar" divary-app.jar
 
             # systemd 재시작
             sudo systemctl daemon-reload
             sudo systemctl start divary
             sudo systemctl is-active divary
-
           EOF
 
           rm -f private_key.pem .env

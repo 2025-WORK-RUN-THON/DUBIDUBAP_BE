@@ -2,7 +2,7 @@ name: CI/CD - Docker Build and Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,15 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
+
+      - name: Generate application-prod.yml
+        run: |
+          mkdir -p ./src/main/resources
+          cat << 'EOF' > ./src/main/resources/application-prod.yml
+          ${{ secrets.APPLICATION_PROD_YML }}
+          EOF
+        shell: bash
 
       - name: Build Jar
         run: ./gradlew clean bootJar --no-daemon
@@ -54,5 +62,3 @@ jobs:
       - name: Deploy info
         run: |
           echo "Deploy phase placeholder. Use your infra (e.g., AWS ECS, EC2, Kubernetes) to pull ghcr.io/${{ github.repository }}/server:latest and run docker-compose with .env from GitHub Secrets."
-
-
