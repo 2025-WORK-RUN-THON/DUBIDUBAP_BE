@@ -40,6 +40,7 @@ jobs:
           mkdir -p package
           cp build/libs/*.jar package/
           tar --use-compress-program="gzip -1" -cf guineafigma-app.tar.gz -C package .
+          echo "생성된 아티팩트:" && ls -lh guineafigma-app.tar.gz
         shell: bash
 
       - name: Upload build artifact
@@ -74,8 +75,14 @@ jobs:
 
           tar_file=deploy-package/guineafigma-app.tar.gz
 
+          # 로컬 아티팩트 존재 확인
+          test -f "$tar_file" || { echo "Error: local artifact not found: $tar_file"; ls -lah deploy-package || true; exit 1; }
+
           # tar.gz 파일을 EC2로 전송 (압축 전송으로 속도 향상)
-          scp -i private_key.pem -o StrictHostKeyChecking=no -o Compression=yes "$tar_file" $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/guineafigma-app.tar.gz
+          scp -v -i private_key.pem -o StrictHostKeyChecking=no -o Compression=yes "$tar_file" "$EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/guineafigma-app.tar.gz"
+
+          # 원격 파일 존재 확인
+          ssh -i private_key.pem -o StrictHostKeyChecking=no "$EC2_USERNAME@$EC2_HOST" "ls -l /home/$EC2_USERNAME/guineafigma-app.tar.gz || exit 1"
 
           # 환경변수 파일 생성 및 전송
           cat << ENV_EOF > .env
@@ -85,7 +92,7 @@ jobs:
 
           # EC2에서 압축 해제 후 실행
           ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << EOF
-            set -e
+            set -euo pipefail
             U=$EC2_USERNAME
             cd /home/$U
 
@@ -116,7 +123,7 @@ jobs:
             tar -xzf guineafigma-app.tar.gz -C guineafigma-app
 
             # 최신 JAR 파일 경로 확인
-            latest_jar=\$(ls -1t guineafigma-app/*.jar | head -n 1)
+            latest_jar=\$(ls -1t guineafigma-app/*.jar 2>/dev/null | head -n 1)
             if [ -z "\$latest_jar" ]; then
               echo "Error: No JAR found after extraction"
               exit 1
