@@ -1,8 +1,6 @@
 package com.guineafigma.domain.image.entity;
 
 import com.guineafigma.common.entity.BaseEntity;
-import com.guineafigma.domain.image.enums.ImageType;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -20,11 +18,6 @@ public class Image extends BaseEntity {
     @Column(name = "s3_key", nullable = false, length = 255)
     @Schema(description = "S3 저장 키", example = "users/user_abc123/profile/uuid-filename.jpg")
     private String s3Key;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type", length = 50)
-    @Schema(description = "이미지 타입", example = "DOGAM")
-    private ImageType type;
 
     @Column(name = "original_filename", nullable = false, length = 255)
     @Schema(description = "원본 파일명", example = "diving_photo.jpg")
@@ -47,9 +40,8 @@ public class Image extends BaseEntity {
     private Long postId;
 
     @Builder
-    public Image(String s3Key, ImageType type, String originalFilename, Long width, Long height, Long userId, Long postId) {
+    public Image(String s3Key, String originalFilename, Long width, Long height, Long userId, Long postId) {
         this.s3Key = s3Key;
-        this.type = type;
         this.originalFilename = originalFilename;
         this.width = width;
         this.height = height;
@@ -63,9 +55,6 @@ public class Image extends BaseEntity {
         this.height = height;
     }
     
-    public void updateType(ImageType type) {
-        this.type = type;
-    }
 
     // S3 키 업데이트
     public void updateS3Key(String s3Key) {

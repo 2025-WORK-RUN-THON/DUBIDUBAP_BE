@@ -1,7 +1,6 @@
 package com.guineafigma.domain.image.service;
 
 import com.guineafigma.domain.image.dto.request.ImageUploadRequest;
-import com.guineafigma.domain.image.enums.ImageType;
 import com.guineafigma.global.exception.BusinessException;
 import com.guineafigma.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -51,17 +50,7 @@ public class ImageValidationService {
         }
     }
 
-    public void validateUserImageType(ImageType imageType) {
-        if (!imageType.name().startsWith("USER_")) {
-            throw new IllegalArgumentException("USER 타입 이미지만 처리 가능합니다: " + imageType);
-        }
-    }
-
-    public void validateSystemImageType(ImageType imageType) {
-        if (!imageType.name().startsWith("SYSTEM_")) {
-            throw new IllegalArgumentException("SYSTEM 타입 이미지만 처리 가능합니다: " + imageType);
-        }
-    }
+    
 
     public void validateUserId(Long userId) {
         if (userId == null) {

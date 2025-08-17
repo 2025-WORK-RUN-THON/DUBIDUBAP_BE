@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.guineafigma.domain.image.enums.ImageType;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -28,40 +27,6 @@ public class ImagePathService {
     
     private final ImageValidationService imageValidationService;
 
-    // 유저 이미지 업로드 경로 생성
-    public String generateUserUploadPath(ImageType imageType, Long userId, String additionalPath) {
-        imageValidationService.validateUserImageType(imageType);
-        imageValidationService.validateUserId(userId);
-        
-        String typeWithoutPrefix = extractTypeWithoutPrefix(imageType.name(), "USER_");
-        
-        StringBuilder path = new StringBuilder("users/")
-                .append(userId)
-                .append("/")
-                .append(typeWithoutPrefix);
-        
-        if (additionalPath != null && !additionalPath.trim().isEmpty()) {
-            appendPath(path, additionalPath);
-        }
-        
-        return path.toString();
-    }
-    
-    // 시스템 이미지 업로드 경로 생성
-    public String generateSystemUploadPath(ImageType imageType, String additionalPath) {
-        imageValidationService.validateSystemImageType(imageType);
-        
-        String typeWithoutPrefix = extractTypeWithoutPrefix(imageType.name(), "SYSTEM_");
-        
-        StringBuilder path = new StringBuilder("system/")
-                .append(typeWithoutPrefix); // system/dogam
-        
-        if (additionalPath != null && !additionalPath.trim().isEmpty()) {
-            appendPath(path, additionalPath);
-        }
-        
-        return path.toString();
-    }
 
     // temp 경로 생성
     public String generateTempPath(Long userId) {
@@ -160,14 +125,5 @@ public class ImagePathService {
         return s3Key != null && s3Key.contains("/temp/");
     }
 
-    private String extractTypeWithoutPrefix(String typeName, String prefix) {
-        return typeName.substring(prefix.length()).toLowerCase();
-    }
-
-    private void appendPath(StringBuilder path, String additionalPath) {
-        if (!additionalPath.startsWith("/")) {
-            path.append("/");
-        }
-        path.append(additionalPath);
-    }
+    
 } 

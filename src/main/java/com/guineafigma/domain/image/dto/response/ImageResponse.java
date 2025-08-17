@@ -1,7 +1,6 @@
 package com.guineafigma.domain.image.dto.response;
 
 import com.guineafigma.domain.image.entity.Image;
-import com.guineafigma.domain.image.enums.ImageType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
@@ -32,9 +31,6 @@ public class ImageResponse {
     @Schema(description = "이미지 높이", example = "1080")
     private Long height;
     
-    @Schema(description = "이미지 타입", example = "USER_CHAT")
-    private ImageType type;
-    
     @Schema(description = "생성 일시", example = "2025-01-15T10:30:00")
     private LocalDateTime createdAt;
     
@@ -57,7 +53,6 @@ public class ImageResponse {
                 .originalFilename(image.getOriginalFilename())
                 .width(image.getWidth())
                 .height(image.getHeight())
-                .type(image.getType())
                 .createdAt(image.getCreatedAt())
                 .updatedAt(image.getUpdatedAt())
                 .userId(image.getUserId())
