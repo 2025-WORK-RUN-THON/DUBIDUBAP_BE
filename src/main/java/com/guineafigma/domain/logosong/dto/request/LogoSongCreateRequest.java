@@ -5,9 +5,11 @@ import com.guineafigma.common.enums.VersionType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 @Schema(description = "로고송 생성 요청")
 public class LogoSongCreateRequest {
 

@@ -21,13 +21,13 @@ import org.springframework.stereotype.Component;
 //    }
 //}
 public class JwtProperties {
-    private String secretKey="";
-    private Expiration expiration;
+    private String secretKey = "defaultSecretKeyWhichIsSufficientlyLongForHMAC";
+    private Expiration expiration = new Expiration();
 
     @Getter
     @Setter
     public static class Expiration{
-        private Long access;  // 기본값 (4시간)
-        private Long refresh;  // 기본값 (7일)
+        private Long access = 14400000L;  // 기본값 (4시간)
+        private Long refresh = 604800000L;  // 기본값 (7일)
     }
 }

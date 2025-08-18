@@ -4,7 +4,8 @@ public enum MusicGenre {
     POP("Pop"),
     JAZZ("Jazz"), 
     EDM("EDM"),
-    CLASSIC("Classic");
+    CLASSIC("Classic"),
+    ELECTRONIC("Electronic");
 
     private final String displayName;
 

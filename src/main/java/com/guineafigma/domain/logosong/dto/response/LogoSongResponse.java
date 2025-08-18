@@ -1,6 +1,7 @@
 package com.guineafigma.domain.logosong.dto.response;
 
 import com.guineafigma.common.enums.MusicGenre;
+import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.common.enums.VersionType;
 import com.guineafigma.domain.logosong.entity.LogoSong;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -62,6 +63,21 @@ public class LogoSongResponse {
     @Schema(description = "수정일")
     private LocalDateTime updatedAt;
 
+    @Schema(description = "가사")
+    private String lyrics;
+
+    @Schema(description = "비디오 가이드라인")
+    private String videoGuideline;
+
+    @Schema(description = "음악 생성 상태")
+    private MusicGenerationStatus musicStatus;
+
+    @Schema(description = "생성된 음악 URL")
+    private String generatedMusicUrl;
+
+    @Schema(description = "음악 생성 완료일")
+    private LocalDateTime generatedAt;
+
     public static LogoSongResponse from(LogoSong logoSong) {
         return LogoSongResponse.builder()
                 .id(logoSong.getId())
@@ -78,6 +94,11 @@ public class LogoSongResponse {
                 .additionalInfo(logoSong.getAdditionalInfo())
                 .likeCount(logoSong.getLikeCount())
                 .viewCount(logoSong.getViewCount())
+                .lyrics(logoSong.getLyrics())
+                .videoGuideline(logoSong.getVideoGuideline())
+                .musicStatus(logoSong.getMusicStatus())
+                .generatedMusicUrl(logoSong.getGeneratedMusicUrl())
+                .generatedAt(logoSong.getGeneratedAt())
                 .createdAt(logoSong.getCreatedAt())
                 .updatedAt(logoSong.getUpdatedAt())
                 .build();

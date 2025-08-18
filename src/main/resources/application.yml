@@ -31,3 +31,23 @@ server:
 logging:
   level:
     com.guineafigma: DEBUG
+
+# Suno API 설정
+suno:
+  api:
+    key: ${SUNO_API_KEY:your-suno-api-key}
+    url: ${SUNO_API_URL:https://api.sunoapi.org}
+
+# OpenAI API 설정 (가사 생성용)
+openai:
+  api:
+    key: ${OPENAI_API_KEY:your-openai-api-key}
+    url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+
+# JWT 설정
+jwt:
+  secret-key: ${JWT_SECRET:defaultSecretKeyWhichIsSufficientlyLongForHMAC}
+  expiration:
+    access: ${JWT_EXPIRATION:14400000}
+    refresh: ${JWT_REFRESH_EXPIRATION:604800000}

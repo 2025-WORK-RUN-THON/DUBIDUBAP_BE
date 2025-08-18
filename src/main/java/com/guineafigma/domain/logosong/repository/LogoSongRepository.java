@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LogoSongRepository extends JpaRepository<LogoSong, Long> {
@@ -34,4 +35,10 @@ public interface LogoSongRepository extends JpaRepository<LogoSong, Long> {
     
     @Query("SELECT l FROM LogoSong l ORDER BY l.createdAt DESC")
     Page<LogoSong> findByOrderByCreatedAtDesc(Pageable pageable);
+    
+    // Suno API 관련 메소드들
+    Optional<LogoSong> findBySunoTaskId(String sunoTaskId);
+    
+    @Query("SELECT l FROM LogoSong l WHERE l.musicStatus = :status")
+    List<LogoSong> findByMusicStatus(@Param("status") com.guineafigma.common.enums.MusicGenerationStatus status);
 }

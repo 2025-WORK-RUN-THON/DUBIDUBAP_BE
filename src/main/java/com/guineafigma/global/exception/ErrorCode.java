@@ -51,7 +51,17 @@ public enum ErrorCode {
     ACCESS_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_002", "액세스 토큰이 만료되었습니다."), // TODO: 토큰 만료 시 401 에러 처리 필요
     INVALID_USER_CONTEXT(HttpStatus.UNAUTHORIZED, "AUTH_003", "사용자 인증 정보가 유효하지 않습니다."),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH_004", "인증이 필요합니다."),
-    ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTH_005", "접근이 거절되었습니다.");
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTH_005", "접근이 거절되었습니다."),
+
+    // Suno API 관련 에러코드
+    SUNO_API_ERROR(HttpStatus.BAD_GATEWAY, "SUNO_001", "Suno API 호출 실패"),
+    SUNO_API_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "SUNO_002", "Suno API 인증 실패"),
+    SUNO_API_BAD_REQUEST(HttpStatus.BAD_REQUEST, "SUNO_003", "Suno API 요청 데이터 오류"),
+    SUNO_TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "SUNO_004", "Suno 작업을 찾을 수 없습니다."),
+    MUSIC_GENERATION_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "SUNO_005", "음악 생성 시간 초과"),
+    MUSIC_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SUNO_006", "음악 생성 실패"),
+    MUSIC_GENERATION_IN_PROGRESS(HttpStatus.CONFLICT, "SUNO_007", "이미 음악 생성이 진행 중입니다."),
+    LYRICS_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SUNO_008", "가사 생성 실패");
 
     // TODO: 비즈니스 로직 개발하면서 필요한 에러코드들 추가
     private final HttpStatus status;

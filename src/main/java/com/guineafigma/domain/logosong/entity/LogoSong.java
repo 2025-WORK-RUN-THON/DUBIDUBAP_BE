@@ -2,7 +2,10 @@ package com.guineafigma.domain.logosong.entity;
 
 import com.guineafigma.common.entity.BaseEntity;
 import com.guineafigma.common.enums.MusicGenre;
+import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.common.enums.VersionType;
+
+import java.time.LocalDateTime;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -62,6 +65,26 @@ public class LogoSong extends BaseEntity {
     @Builder.Default
     private Integer viewCount = 0;
 
+    @Column(name = "lyrics", columnDefinition = "TEXT")
+    private String lyrics;
+
+    @Column(name = "video_guideline", columnDefinition = "TEXT")
+    private String videoGuideline;
+
+    @Column(name = "suno_task_id")
+    private String sunoTaskId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "music_status")
+    @Builder.Default
+    private MusicGenerationStatus musicStatus = MusicGenerationStatus.PENDING;
+
+    @Column(name = "generated_music_url")
+    private String generatedMusicUrl;
+
+    @Column(name = "generated_at")
+    private LocalDateTime generatedAt;
+
     public void incrementLikeCount() {
         this.likeCount++;
     }
@@ -74,5 +97,28 @@ public class LogoSong extends BaseEntity {
 
     public void incrementViewCount() {
         this.viewCount++;
+    }
+
+    public void updateLyrics(String lyrics) {
+        this.lyrics = lyrics;
+    }
+
+    public void updateVideoGuideline(String videoGuideline) {
+        this.videoGuideline = videoGuideline;
+    }
+
+    public void updateSunoTaskId(String sunoTaskId) {
+        this.sunoTaskId = sunoTaskId;
+    }
+
+    public void updateMusicStatus(MusicGenerationStatus status) {
+        this.musicStatus = status;
+        if (status == MusicGenerationStatus.COMPLETED) {
+            this.generatedAt = LocalDateTime.now();
+        }
+    }
+
+    public void updateGeneratedMusicUrl(String url) {
+        this.generatedMusicUrl = url;
     }
 }
