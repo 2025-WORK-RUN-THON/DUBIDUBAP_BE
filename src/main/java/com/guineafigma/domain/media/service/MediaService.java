@@ -64,7 +64,7 @@ public class MediaService {
                     .width(metadata.width)
                     .height(metadata.height)
                     .userId(userId)
-                    .postId(null)
+                    .logosongId(null)
                     .build();
             
             Media saved = mediaRepository.save(temp);
@@ -72,7 +72,7 @@ public class MediaService {
             return MediaResponse.from(saved, tempUrl);
         } catch (IOException e) {
             log.error("미디어 처리 중 오류 발생: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+            throw new BusinessException(ErrorCode.MEDIA_UPLOAD_FAILED);
         }
     }
 
@@ -91,13 +91,13 @@ public class MediaService {
                     .width(metadata.width)
                     .height(metadata.height)
                     .userId(mediaPathService.extractUserIdFromPath(request.getUploadPath()))
-                    .postId(null)
+                    .logosongId(null)
                     .build();
             Media saved = mediaRepository.save(media);
             return MediaResponse.from(saved, mediaStorageService.generatePublicUrl(s3Key));
         } catch (IOException e) {
             log.error("미디어 업로드 중 오류 발생: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+            throw new BusinessException(ErrorCode.MEDIA_UPLOAD_FAILED);
         }
     }
 

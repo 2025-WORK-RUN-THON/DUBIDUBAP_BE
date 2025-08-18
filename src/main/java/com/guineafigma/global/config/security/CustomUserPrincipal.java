@@ -1,7 +1,6 @@
 package com.guineafigma.global.config.security;
 
 import com.guineafigma.domain.user.entity.User;
-import com.guineafigma.domain.user.enums.Role;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -14,28 +13,28 @@ import java.util.Collections;
 public class CustomUserPrincipal implements UserDetails {
     
     private final Long id;
-    private final String email;
-    private final Role role;
+    private final String nickname;
+    private final Boolean isActive;
     private final Collection<? extends GrantedAuthority> authorities;
     
-    public CustomUserPrincipal(User member) {
-        this.id = member.getId();
-        this.email = member.getEmail();
-        this.role = member.getRole();
+    public CustomUserPrincipal(User user) {
+        this.id = user.getId();
+        this.nickname = user.getNickname();
+        this.isActive = user.getIsActive();
         this.authorities = Collections.singleton(
-            new SimpleGrantedAuthority("ROLE_" + member.getRole().name())
+            new SimpleGrantedAuthority("ROLE_USER")
         );
     }
     
     // UserDetails 구현 메서드들
     @Override
     public String getUsername() {
-        return email;
+        return nickname;
     }
     
     @Override
     public String getPassword() {
-        return ""; // OAuth2만 제공하고 있으므로 비밀번호 X
+        return ""; // JWT 토큰 기반 인증이므로 비밀번호 미사용
     }
     
     @Override
@@ -65,6 +64,6 @@ public class CustomUserPrincipal implements UserDetails {
     
     @Override
     public boolean isEnabled() {
-        return true;
+        return isActive;
     }
 }

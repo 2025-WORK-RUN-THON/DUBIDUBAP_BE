@@ -2,9 +2,7 @@ package com.guineafigma.domain.system.controller;
 
 import com.guineafigma.common.response.ApiResponse;
 import com.guineafigma.domain.user.entity.User;
-import com.guineafigma.domain.user.enums.Role;
 import com.guineafigma.domain.user.repository.UserRepository;
-import com.guineafigma.common.enums.SocialType;
 import com.guineafigma.global.config.SwaggerConfig.ApiErrorExamples;
 import com.guineafigma.global.config.security.jwt.JwtTokenProvider;
 import com.guineafigma.global.exception.ErrorCode;
@@ -16,12 +14,9 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,7 +28,8 @@ import java.util.Map;
 public class SystemController {
     private final DataSource dataSource;
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserRepository memberRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Operation(summary = "헬스 체크", description = "서비스 및 DB 상태를 확인합니다.")
     @ApiErrorExamples({
@@ -55,7 +51,7 @@ public class SystemController {
         healthInfo.put("status", "UP");
         healthInfo.put("db", dbStatus);
         healthInfo.put("timestamp", System.currentTimeMillis());
-        healthInfo.put("service", "guineafigma-server");
+        healthInfo.put("service", "logosong-server");
 
         return ApiResponse.success("서비스가 정상적으로 동작 중입니다.", healthInfo);
     }
@@ -91,30 +87,28 @@ public class SystemController {
     // @Profile("dev") 추후 dev 환경에서만 사용하도록 수정
     @Operation(summary = "테스트 유저 생성", description = "개발 환경용 테스트 유저를 생성합니다. JWT 인증 테스트를 위해 필요합니다.")
     @PostMapping("/test-user")
-    public ApiResponse<String> createTestUser(@RequestParam(defaultValue = "test@guineafigma.com") String email) {
-        if (memberRepository.findByEmail(email).isEmpty()) {
+    public ApiResponse<String> createTestUser(@RequestParam(defaultValue = "testuser") String nickname) {
+        if (userRepository.findByNickname(nickname).isEmpty()) {
             User testUser = User.builder()
-                    .email(email)
-                    .socialType(SocialType.GOOGLE)
-                    .role(Role.USER)
+                    .nickname(nickname)
+                    .password(passwordEncoder.encode("test1234"))
+                    .isActive(true)
                     .build();
-            memberRepository.save(testUser);
-            return ApiResponse.success("테스트 유저 생성됨: " + email + " (ID: " + testUser.getId() + ")");
+            userRepository.save(testUser);
+            return ApiResponse.success("테스트 유저 생성됨: " + nickname + " (ID: " + testUser.getId() + ")");
         }
-        User existingUser = memberRepository.findByEmail(email).get();
-        return ApiResponse.success("테스트 유저 이미 존재: " + email + " (ID: " + existingUser.getId() + ")");
+        User existingUser = userRepository.findByNickname(nickname).get();
+        return ApiResponse.success("테스트 유저 이미 존재: " + nickname + " (ID: " + existingUser.getId() + ")");
     }
 
     // @Profile("dev") 추후 dev 환경에서만 사용하도록 수정
     @Operation(summary = "테스트 JWT 토큰 발급", description = "개발 환경용 JWT 토큰을 발급합니다.")
     @PostMapping("/test-token")
-    public ApiResponse<String> generateTestToken(@RequestParam(defaultValue = "test@guineafigma.com") String email) {
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-            email, 
-            null, 
-            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-        String token = jwtTokenProvider.generateToken(auth);
+    public ApiResponse<String> generateTestToken(@RequestParam(defaultValue = "testuser") String nickname) {
+        User user = userRepository.findByNickname(nickname)
+                .orElseThrow(() -> new RuntimeException("테스트 유저를 먼저 생성해주세요."));
+        
+        String token = jwtTokenProvider.generateAccessToken(user.getId(), user.getNickname());
         return ApiResponse.success(token);
     }
 

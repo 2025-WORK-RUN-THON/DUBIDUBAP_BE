@@ -33,15 +33,30 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(Authentication authentication) {
-        String email = authentication.getName();
+        String nickname = authentication.getName();
 
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(nickname)
                 .claim("role", authentication.getAuthorities().iterator().next().getAuthority())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getExpiration().getAccess()))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String generateAccessToken(Long userId, String nickname) {
+        return Jwts.builder()
+                .setSubject(nickname)
+                .claim("userId", userId)
+                .claim("nickname", nickname)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getExpiration().getAccess()))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public Long getAccessTokenExpiration() {
+        return jwtProperties.getExpiration().getAccess() / 1000;
     }
 
     public boolean validateToken(String token) {
@@ -63,16 +78,36 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody();
 
-        String email = claims.getSubject();
+        String nickname = claims.getSubject();
+        Long userId = claims.get("userId", Long.class);
         
         try {
-            // CustomUserPrincipal을 통해 사용자 정보 로드
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            // 사용자 활성 상태 확인까지 포함
+            UserDetails userDetails = userDetailsService.loadUserByUsername(nickname);
             return new UsernamePasswordAuthenticationToken(userDetails, token, userDetails.getAuthorities());
         } catch (BusinessException e) {
-            // 사용자 정보를 찾을 수 없는 경우
-            throw new BusinessException(ErrorCode.INVALID_USER_CONTEXT);
+            throw new BusinessException(ErrorCode.USER_NOT_ACTIVE);
         }
+    }
+
+    public Long getUserIdFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.get("userId", Long.class);
+    }
+
+    public String getNicknameFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.getSubject();
     }
 
     public static String resolveToken(HttpServletRequest request) {

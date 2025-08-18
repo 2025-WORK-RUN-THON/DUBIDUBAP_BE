@@ -1,9 +1,10 @@
 spring:
   config:
     name: application
+    import: optional:file:.env[.properties]
 
   application:
-    name: guineafigma-server
+    name: dubidubap-server
 
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}

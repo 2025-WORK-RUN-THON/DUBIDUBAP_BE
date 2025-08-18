@@ -1,11 +1,9 @@
 package com.guineafigma.domain.user.entity;
 
 import com.guineafigma.common.entity.BaseEntity;
-import com.guineafigma.domain.user.enums.Levels;
-import com.guineafigma.domain.user.enums.Role;
-import com.guineafigma.common.enums.SocialType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 @Entity
@@ -17,19 +15,26 @@ import lombok.*;
 @AllArgsConstructor
 public class User extends BaseEntity {
 
-
+    @Column(unique = true, nullable = false)
     @NotNull
-    private String email;
+    @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하여야 합니다.")
+    private String nickname;
 
-    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @NotNull
-    private SocialType socialType;
+    @Size(min = 4, message = "비밀번호는 최소 4자리 이상이어야 합니다.")
+    private String password;
 
-    @Enumerated(EnumType.STRING)
-    @NotNull
-    private Role role;
+    @Column(name = "is_active", columnDefinition = "BOOLEAN DEFAULT TRUE")
+    @Builder.Default
+    private Boolean isActive = true;
 
-    @Enumerated(EnumType.STRING)
-    private Levels level;
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    public void activate() {
+        this.isActive = true;
+    }
     
 }

@@ -41,12 +41,12 @@ public class MediaValidationService {
         }
         
         if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new BusinessException(ErrorCode.IMAGE_SIZE_TOO_LARGE);
+            throw new BusinessException(ErrorCode.MEDIA_SIZE_TOO_LARGE);
         }
         
         String contentType = file.getContentType();
         if (contentType == null || !(contentType.startsWith("image/") || contentType.startsWith("video/") || contentType.startsWith("audio/"))) {
-            throw new BusinessException(ErrorCode.IMAGE_FORMAT_NOT_SUPPORTED);
+            throw new BusinessException(ErrorCode.MEDIA_FORMAT_NOT_SUPPORTED);
         }
     }
 

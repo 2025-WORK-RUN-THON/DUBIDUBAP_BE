@@ -13,7 +13,7 @@ public interface MediaRepository extends JpaRepository<Media, Long> {
     List<Media> findByUserId(Long userId);
     Optional<Media> findByS3Key(String s3Key);
     List<Media> findByS3KeyStartingWith(String s3KeyPrefix);
-    List<Media> findByPostIdIsNull();
+    List<Media> findByLogosongIdIsNull();
     List<Media> findAllByCreatedAtBeforeAndS3KeyContaining(LocalDateTime cutoffTime, String contains);
 }
 

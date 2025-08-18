@@ -75,12 +75,12 @@ public class MediaStorageService {
                 log.info("S3 파일 이동 완료: {} -> {}", sourceKey, destinationKey);
             } else {
                 log.error("파일 복사 검증 실패: {}", destinationKey);
-                throw new BusinessException(ErrorCode.IMAGE_UPLOAD_FAILED);
+                throw new BusinessException(ErrorCode.MEDIA_UPLOAD_FAILED);
             }
             
         } catch (Exception e) {
             log.error("S3 파일 이동 실패: {} -> {}", sourceKey, destinationKey, e);
-            throw new BusinessException(ErrorCode.IMAGE_UPLOAD_FAILED);
+            throw new BusinessException(ErrorCode.MEDIA_UPLOAD_FAILED);
         }
     }
 
@@ -109,7 +109,7 @@ public class MediaStorageService {
 
     public String extractS3KeyFromUrl(String imageUrl) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.IMAGE_URL_INVALID_FORMAT);
+            throw new BusinessException(ErrorCode.MEDIA_UPLOAD_FAILED);
         }
         
         try {
@@ -118,12 +118,12 @@ public class MediaStorageService {
                 return parts[1];
             }
             log.error("S3 URL 형식 오류: {}", imageUrl);
-            throw new BusinessException(ErrorCode.IMAGE_URL_INVALID_FORMAT);
+            throw new BusinessException(ErrorCode.MEDIA_UPLOAD_FAILED);
         } catch (BusinessException e) {
             throw e; 
         } catch (Exception e) {
             log.error("S3 키 추출 중 예외 발생: url={}", imageUrl, e);
-            throw new BusinessException(ErrorCode.IMAGE_URL_INVALID_FORMAT);
+            throw new BusinessException(ErrorCode.MEDIA_UPLOAD_FAILED);
         }
     }
 

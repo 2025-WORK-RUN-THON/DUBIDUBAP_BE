@@ -43,8 +43,8 @@ public class MediaResponse {
     @Schema(description = "S3 저장 키")
     private String s3Key;
 
-    @Schema(description = "연결된 게시글(카드) ID")
-    private Long postId;
+    @Schema(description = "연결된 로고송 ID")
+    private Long logosongId;
     
     public static MediaResponse from(Media media, String fileUrl) {
         return MediaResponse.builder()
@@ -57,7 +57,7 @@ public class MediaResponse {
                 .updatedAt(media.getUpdatedAt())
                 .userId(media.getUserId())
                 .s3Key(media.getS3Key())
-                .postId(media.getPostId())
+                .logosongId(media.getLogosongId())
                 .build();
     }
 }
