@@ -50,8 +50,15 @@ public class SwaggerConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Dubidubap API")
-                        .description("로고송 제작 서비스 Dubidubap의 REST API 문서")
+                        .title("하비뒤밥 (Dubidubap) API")
+                        .description("하비뒤밥 - AI 기반 로고송 제작 플랫폼\n\n" +
+                                "🎵 **주요 기능**:\n" +
+                                "- 브랜드 정보 기반 로고송 가사 생성 (OpenAI)\n" +
+                                "- AI 음악 생성 및 업로드 (Suno AI)\n" +
+                                "- 사용자 커미니티 및 상호작용 기능\n" +
+                                "- S3 미디어 관리 및 다운로드\n\n" +
+                                "🔒 **인증**: JWT Bearer Token 기반\n" +
+                                "🌐 **서버**: Spring Boot 3.x + MySQL/H2")
                         .version("v1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList("JWT"));
     }
