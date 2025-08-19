@@ -41,7 +41,7 @@ public class TestDataBuilder {
                 .nickname("testUser")
                 .accessToken("test-jwt-token")
                 .tokenType("Bearer")
-                .expiresIn(14400L)
+                .expiresIn(1440000000L)
                 .isNewUser(false)
                 .message("로그인 성공")
                 .build();
@@ -78,7 +78,16 @@ public class TestDataBuilder {
     }
 
     public static LogoSong createTestLogoSong() {
+        User user = createTestUser();
+        // Reflection으로 user id 지정
+        try {
+            java.lang.reflect.Field idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(user, 1L);
+        } catch (Exception ignored) {}
+
         LogoSong logoSong = LogoSong.builder()
+                .user(user)
                 .serviceName("테스트 서비스")
                 .slogan("테스트 슬로건")
                 .industry("IT")
@@ -93,6 +102,7 @@ public class TestDataBuilder {
                 .musicStatus(MusicGenerationStatus.PENDING)
                 .likeCount(0)
                 .viewCount(0)
+                .isPublic(false) // 기본값은 비공개
                 .build();
         
         // Reflection을 통해 ID 설정
@@ -108,7 +118,15 @@ public class TestDataBuilder {
     }
 
     public static LogoSong createLogoSongWithMusic() {
+        User user = createTestUser();
+        try {
+            java.lang.reflect.Field idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(user, 2L);
+        } catch (Exception ignored) {}
+
         LogoSong logoSong = LogoSong.builder()
+                .user(user)
                 .serviceName("테스트 서비스")
                 .slogan("테스트 슬로건")
                 .industry("IT")
@@ -125,6 +143,7 @@ public class TestDataBuilder {
                 .imageUrl("https://example.com/image.jpg")
                 .likeCount(5)
                 .viewCount(10)
+                .isPublic(true) // 음악이 생성된 로고송은 공개
                 .build();
         
         // Reflection을 통해 ID 설정
@@ -151,7 +170,15 @@ public class TestDataBuilder {
 
     // 진행 상태별 로고송 데이터
     public static LogoSong createLogoSongInProgress() {
+        User user = createTestUser();
+        try {
+            java.lang.reflect.Field idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(user, 3L);
+        } catch (Exception ignored) {}
+
         LogoSong logoSong = LogoSong.builder()
+                .user(user)
                 .serviceName("테스트 서비스")
                 .slogan("테스트 슬로건")
                 .industry("IT")
@@ -167,6 +194,7 @@ public class TestDataBuilder {
                 .sunoTaskId("task_123456")
                 .likeCount(0)
                 .viewCount(0)
+                .isPublic(false) // 진행 중인 로고송은 비공개
                 .build();
         
         // Reflection을 통해 ID 설정
@@ -182,7 +210,15 @@ public class TestDataBuilder {
     }
 
     public static LogoSong createLogoSongFailed() {
+        User user = createTestUser();
+        try {
+            java.lang.reflect.Field idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(user, 4L);
+        } catch (Exception ignored) {}
+
         LogoSong logoSong = LogoSong.builder()
+                .user(user)
                 .serviceName("테스트 서비스")
                 .slogan("테스트 슬로건")
                 .industry("IT")
@@ -198,6 +234,7 @@ public class TestDataBuilder {
                 // errorMessage 필드 없음 - 엔티티에는 없는 필드
                 .likeCount(0)
                 .viewCount(0)
+                .isPublic(false) // 실패한 로고송은 비공개
                 .build();
         
         // Reflection을 통해 ID 설정
@@ -214,7 +251,15 @@ public class TestDataBuilder {
 
     // 페이지네이션용 테스트 데이터
     public static LogoSong createLogoSongWithId(Long id) {
+        User user = createTestUser();
+        try {
+            java.lang.reflect.Field idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(user, id);
+        } catch (Exception ignored) {}
+
         LogoSong logoSong = LogoSong.builder()
+                .user(user)
                 .serviceName("테스트 서비스 " + id)
                 .slogan("테스트 슬로건")
                 .industry("IT")
@@ -229,6 +274,7 @@ public class TestDataBuilder {
                 .musicStatus(MusicGenerationStatus.PENDING)
                 .likeCount(0)
                 .viewCount(0)
+                .isPublic(id % 2 == 0) // 짝수 ID는 공개, 홀수 ID는 비공개
                 .build();
         
         // Reflection을 통해 ID 설정
@@ -236,6 +282,89 @@ public class TestDataBuilder {
             java.lang.reflect.Field idField = LogoSong.class.getDeclaredField("id");
             idField.setAccessible(true);
             idField.set(logoSong, id);
+        } catch (Exception e) {
+            // 테스트용으로 ID 설정 실패해도 진행
+        }
+        
+        return logoSong;
+    }
+
+    // 공개/비공개 로고송 생성 메서드들
+    public static LogoSong createPublicLogoSong() {
+        User user = createTestUser();
+        try {
+            java.lang.reflect.Field idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(user, 10L);
+        } catch (Exception ignored) {}
+
+        LogoSong logoSong = LogoSong.builder()
+                .user(user)
+                .serviceName("공개 테스트 서비스")
+                .slogan("공개 슬로건")
+                .industry("IT")
+                .marketingItem("혁신")
+                .targetCustomer("개발자")
+                .moodTone("밝고 활기찬")
+                .musicGenre("ELECTRONIC")
+                .version(VersionType.SHORT)
+                .additionalInfo("공개 테스트용 로고송")
+                .lyrics("공개 테스트 가사 내용")
+                .videoGuideline("공개 테스트 비디오 가이드라인")
+                .musicStatus(MusicGenerationStatus.COMPLETED)
+                .generatedMusicUrl("https://example.com/public-audio.mp3")
+                .imageUrl("https://example.com/public-image.jpg")
+                .likeCount(10)
+                .viewCount(20)
+                .isPublic(true)
+                .build();
+        
+        // Reflection을 통해 ID 설정
+        try {
+            java.lang.reflect.Field idField = LogoSong.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(logoSong, 100L);
+        } catch (Exception e) {
+            // 테스트용으로 ID 설정 실패해도 진행
+        }
+        
+        return logoSong;
+    }
+
+    public static LogoSong createPrivateLogoSong() {
+        User user = createTestUser();
+        try {
+            java.lang.reflect.Field idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(user, 11L);
+        } catch (Exception ignored) {}
+
+        LogoSong logoSong = LogoSong.builder()
+                .user(user)
+                .serviceName("비공개 테스트 서비스")
+                .slogan("비공개 슬로건")
+                .industry("IT")
+                .marketingItem("혁신")
+                .targetCustomer("개발자")
+                .moodTone("밝고 활기찬")
+                .musicGenre("ELECTRONIC")
+                .version(VersionType.SHORT)
+                .additionalInfo("비공개 테스트용 로고송")
+                .lyrics("비공개 테스트 가사 내용")
+                .videoGuideline("비공개 테스트 비디오 가이드라인")
+                .musicStatus(MusicGenerationStatus.COMPLETED)
+                .generatedMusicUrl("https://example.com/private-audio.mp3")
+                .imageUrl("https://example.com/private-image.jpg")
+                .likeCount(5)
+                .viewCount(15)
+                .isPublic(false)
+                .build();
+        
+        // Reflection을 통해 ID 설정
+        try {
+            java.lang.reflect.Field idField = LogoSong.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(logoSong, 101L);
         } catch (Exception e) {
             // 테스트용으로 ID 설정 실패해도 진행
         }

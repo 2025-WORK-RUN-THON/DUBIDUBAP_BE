@@ -43,10 +43,17 @@ public class SecurityConfig {
                         // 인증이 필요한 엔드포인트 (중간 ** 제거한 안전한 패턴)
                         .requestMatchers("/api/v1/auth/logout").authenticated()
                         .requestMatchers("/api/v1/auth/me").authenticated()
-                        .requestMatchers("/api/v1/logosongs/*/like").authenticated()
                         .requestMatchers("/api/v1/logosongs/my/**").authenticated()
-                        .requestMatchers("/api/v1/media/upload").authenticated()
-                        // 중복된 "/api" 제거 (실제 노출 경로는 "/api/v1/..." 만 사용)
+                        
+                        .requestMatchers("/api/v1/logosongs/*/generate-music").authenticated()
+                        .requestMatchers("/api/v1/logosongs/*/like").authenticated()
+                        .requestMatchers("/api/v1/logosongs/*/regenerate-lyrics").authenticated()
+                        .requestMatchers("/api/v1/logosongs/*/regenerate-video-guide").authenticated()
+                        .requestMatchers("/api/v1/logosongs/*/status").authenticated()
+                        .requestMatchers("/api/v1/logosongs/*/visibility").authenticated()
+                        .requestMatchers("/api/v1/logosongs/guides").authenticated()
+                        .requestMatchers("/api/v1/logosongs/with-generation").authenticated()
+                        
                         // 공개 엔드포인트
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/logosongs").permitAll()

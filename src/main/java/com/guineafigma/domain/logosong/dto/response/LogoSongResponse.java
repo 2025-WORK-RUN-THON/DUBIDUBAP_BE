@@ -17,6 +17,12 @@ public class LogoSongResponse {
     @Schema(description = "로고송 고유 식별자", example = "123", required = true, nullable = false)
     private Long id;
 
+    @Schema(description = "로고송을 만든 사용자 ID", example = "456", required = true, nullable = false)
+    private Long userId;
+
+    @Schema(description = "로고송을 만든 사용자 닉네임", example = "musicCreator", required = true, nullable = false)
+    private String userNickname;
+
     @Schema(description = "브랜드 대표 이미지 URL (출력 전용)", example = "https://cdn.example.com/images/cafe-logo-123.jpg", required = false, nullable = true)
     private String imageUrl;
 
@@ -74,6 +80,9 @@ public class LogoSongResponse {
     @Schema(description = "음악 생성 완료 일시", example = "2025-08-19T15:20:00", required = false, nullable = true)
     private LocalDateTime generatedAt;
 
+    @Schema(description = "공개 여부", example = "false", required = true, nullable = false)
+    private boolean isPublic;
+
     @Schema(description = "현재 사용자의 좋아요 여부", example = "false", required = false, nullable = false)
     private boolean isLiked;
 
@@ -85,6 +94,8 @@ public class LogoSongResponse {
         boolean likedValue = isLiked != null && isLiked;
         return LogoSongResponse.builder()
                 .id(logoSong.getId())
+                .userId(logoSong.getUserId())
+                .userNickname(logoSong.getUserNickname())
                 .imageUrl(logoSong.getImageUrl())
                 .serviceName(logoSong.getServiceName())
                 .slogan(logoSong.getSlogan())
@@ -102,6 +113,7 @@ public class LogoSongResponse {
                 .musicStatus(logoSong.getMusicStatus())
                 .generatedMusicUrl(logoSong.getGeneratedMusicUrl())
                 .generatedAt(logoSong.getGeneratedAt())
+                .isPublic(Boolean.TRUE.equals(logoSong.getIsPublic()))
                 .createdAt(logoSong.getCreatedAt())
                 .updatedAt(logoSong.getUpdatedAt())
                 .isLiked(likedValue)

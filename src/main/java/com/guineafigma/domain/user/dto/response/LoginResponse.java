@@ -21,7 +21,7 @@ public class LoginResponse {
     @Schema(description = "Authorization 헤더에 사용할 토큰 타입", example = "Bearer")
     private String tokenType;
 
-    @Schema(description = "토큰 만료까지 남은 시간 (초 단위)", example = "14400")
+    @Schema(description = "토큰 만료까지 남은 시간 (초 단위)", example = "1440000000")
     private Long expiresIn;
 
     @Schema(description = "이번에 신규 가입한 사용자인지 여부", example = "false")

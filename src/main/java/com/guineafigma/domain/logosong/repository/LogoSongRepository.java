@@ -28,6 +28,8 @@ public interface LogoSongRepository extends JpaRepository<LogoSong, Long> {
     
     @Query("SELECT l FROM LogoSong l ORDER BY l.likeCount DESC")
     Page<LogoSong> findByOrderByLikeCountDesc(Pageable pageable);
+
+    Page<LogoSong> findByIsPublicTrue(Pageable pageable);
     
     @Query("SELECT l FROM LogoSong l ORDER BY l.viewCount DESC")
     Page<LogoSong> findByOrderByViewCountDesc(Pageable pageable);
@@ -40,4 +42,8 @@ public interface LogoSongRepository extends JpaRepository<LogoSong, Long> {
     
     @Query("SELECT l FROM LogoSong l WHERE l.musicStatus = :status")
     List<LogoSong> findByMusicStatus(@Param("status") com.guineafigma.common.enums.MusicGenerationStatus status);
+
+    // 소유자 검증용 메서드들
+    Optional<LogoSong> findByIdAndUser_Id(Long id, Long userId);
+    Page<LogoSong> findByUser_Id(Long userId, Pageable pageable);
 }

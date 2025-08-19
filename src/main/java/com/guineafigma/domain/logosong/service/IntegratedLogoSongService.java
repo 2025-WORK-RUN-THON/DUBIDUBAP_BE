@@ -28,12 +28,12 @@ public class IntegratedLogoSongService {
 
     // 로고송 생성 - 가사/비디오 가이드라인 생성 + 음악 생성 통합 워크플로우
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public LogoSongResponse createLogoSongWithGeneration(LogoSongCreateRequest request) {
+    public LogoSongResponse createLogoSongWithGeneration(LogoSongCreateRequest request, Long userId) {
         try {
-            log.info("통합 로고송 생성 시작: serviceName={}", request.getServiceName());
+            log.info("통합 로고송 생성 시작: serviceName={}, userId={}", request.getServiceName(), userId);
             
             // 1. 기본 LogoSong 생성 (짧은 트랜잭션)
-            LogoSongResponse created = logoSongService.createLogoSong(request);
+            LogoSongResponse created = logoSongService.createLogoSong(request, userId);
             Long logoSongId = created.getId();
 
             // 2. 가사/비디오 가이드라인 생성 (트랜잭션 없음, 외부 API)
@@ -41,7 +41,7 @@ public class IntegratedLogoSongService {
 
             // 3. LogoSong에 가사/가이드라인 저장 (짧은 트랜잭션)
             LogoSongResponse updated = logoSongService.updateLyricsAndVideoGuide(
-                    logoSongId, guides.getLyrics(), guides.getVideoGuideline());
+                    logoSongId, guides.getLyrics(), guides.getVideoGuideline(), userId);
 
             // 4. 트랜잭션 커밋 이후 비동기 음악 생성 트리거
             logoSongGenerationService.generateLogoSongAsync(logoSongId);
@@ -60,25 +60,48 @@ public class IntegratedLogoSongService {
     // 로고송 생성 - 가사만 생성하여 저장하고 전체 레코드를 반환 (비디오 가이드라인 생성 안 함)
     // 음악 생성은 시작하지 않음
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public LogoSongResponse createLogoSongWithGuidesOnly(LogoSongCreateRequest request) {
+    public LogoSongResponse createLogoSongWithGuidesOnly(LogoSongCreateRequest request, Long userId) {
         try {
-            log.info("로고송(가사만) 생성 시작: serviceName={}", request.getServiceName());
+            log.info("로고송(가사만) 생성 시작: serviceName={}, userId={}", request.getServiceName(), userId);
 
             // 1. 기본 LogoSong 생성 (짧은 트랜잭션)
-            LogoSongResponse created = logoSongService.createLogoSong(request);
+            LogoSongResponse created = logoSongService.createLogoSong(request, userId);
 
             // 2. 가사만 생성 (트랜잭션 없음)
             String lyrics = logoSongLyricsService.generateLyricsOnly(request);
 
             // 3. DB 업데이트 (가사만 저장) 후 전체 레코드 반환, 음악 상태는 PENDING으로 설정
             return logoSongService.updateLyricsOnlyAndSetPending(
-                    created.getId(), lyrics);
+                    created.getId(), lyrics, userId);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             log.error("로고송(가사만) 생성 실패: serviceName={}", request.getServiceName(), e);
             throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);
         }
+    }
+
+    // 기존 테스트 호환용 오버로드 (userId 없이)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public LogoSongResponse createLogoSongWithGeneration(LogoSongCreateRequest request) {
+        // 기본 사용자 처리: 먼저 생성하여 userId 확보
+        LogoSongResponse created = logoSongService.createLogoSong(request);
+        Long logoSongId = created.getId();
+        Long userId = created.getUserId();
+
+        GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
+        LogoSongResponse updated = logoSongService.updateLyricsAndVideoGuide(
+                logoSongId, guides.getLyrics(), guides.getVideoGuideline(), userId);
+        logoSongGenerationService.generateLogoSongAsync(logoSongId);
+        return updated;
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public LogoSongResponse createLogoSongWithGuidesOnly(LogoSongCreateRequest request) {
+        LogoSongResponse created = logoSongService.createLogoSong(request);
+        Long userId = created.getUserId();
+        String lyrics = logoSongLyricsService.generateLyricsOnly(request);
+        return logoSongService.updateLyricsOnlyAndSetPending(created.getId(), lyrics, userId);
     }
 
     // 기존 로고송에 대해 음악 생성 트리거
@@ -105,7 +128,7 @@ public class IntegratedLogoSongService {
         GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
         // 2) DB 업데이트 (짧은 트랜잭션)
         LogoSongResponse updated = logoSongService.updateLyricsAndVideoGuide(
-                logoSongId, guides.getLyrics(), guides.getVideoGuideline());
+                logoSongId, guides.getLyrics(), guides.getVideoGuideline(), null);
         // 3) 음악 재생성 필요 상태로 변경 (짧은 트랜잭션)
         logoSongService.setMusicStatus(logoSongId, MusicGenerationStatus.PENDING);
 
@@ -118,7 +141,7 @@ public class IntegratedLogoSongService {
     public LogoSongResponse regenerateLyricsOnly(Long logoSongId, LogoSongCreateRequest request) {
         String lyrics = logoSongLyricsService.generateLyricsOnly(request);
         LogoSongResponse updated = logoSongService.updateLyricsOnlyAndSetPending(
-                logoSongId, lyrics);
+                logoSongId, lyrics, null);
         log.info("가사 재생성 완료: logoSongId={}", logoSongId);
         return updated;
     }
@@ -129,7 +152,7 @@ public class IntegratedLogoSongService {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
         String videoGuide = logoSongLyricsService.generateVideoGuideOnly(logoSong);
-        LogoSongResponse updated = logoSongService.updateVideoGuidelineOnly(logoSongId, videoGuide);
+        LogoSongResponse updated = logoSongService.updateVideoGuidelineOnly(logoSongId, videoGuide, null);
         log.info("비디오 가이드라인 (재)생성 완료: logoSongId={}", logoSongId);
         return updated;
     }

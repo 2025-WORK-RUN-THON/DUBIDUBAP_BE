@@ -6,6 +6,8 @@ import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
 import com.guineafigma.domain.logosong.dto.response.LogoSongResponse;
 import com.guineafigma.domain.logosong.dto.response.MusicGenerationStatusResponse;
 import com.guineafigma.domain.logosong.entity.LogoSong;
+import com.guineafigma.domain.user.entity.User;
+import com.guineafigma.domain.user.repository.UserRepository;
 import com.guineafigma.domain.logosong.repository.LogoSongRepository;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,9 @@ public class IntegratedLogoSongServiceTest {
 
     @Autowired
     private LogoSongRepository logoSongRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     void testCreateLogoSongWithGeneration_WithoutSunoAPI() {
@@ -147,7 +152,15 @@ public class IntegratedLogoSongServiceTest {
     }
 
     private LogoSong createTestLogoSong() {
+        // 테스트용 사용자 저장 후 해당 사용자로 로고송 생성
+        User user = userRepository.save(User.builder()
+                .nickname("testUser-intg")
+                .password("password")
+                .isActive(true)
+                .build());
+
         return LogoSong.builder()
+                .user(user)
                 .serviceName("테스트 서비스")
                 .slogan("테스트 슬로건")
                 .industry("IT")

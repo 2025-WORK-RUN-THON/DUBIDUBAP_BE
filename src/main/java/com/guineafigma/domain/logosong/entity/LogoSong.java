@@ -3,6 +3,7 @@ package com.guineafigma.domain.logosong.entity;
 import com.guineafigma.common.entity.BaseEntity;
 import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.common.enums.VersionType;
+import com.guineafigma.domain.user.entity.User;
 
 import java.time.LocalDateTime;
 import jakarta.persistence.*;
@@ -17,6 +18,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LogoSong extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @NotNull
+    private User user;
 
     @Column(name = "image_url")
     private String imageUrl;
@@ -79,6 +85,23 @@ public class LogoSong extends BaseEntity {
     @Column(name = "generated_at")
     private LocalDateTime generatedAt;
 
+    @Column(name = "is_public", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean isPublic = false;
+
+    // User 정보를 가져오는 편의 메서드
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
+
+    public String getUserNickname() {
+        return user != null ? user.getNickname() : null;
+    }
+
+    public void setVisibility(boolean publicVisible) {
+        this.isPublic = publicVisible;
+    }
+    
     public void incrementLikeCount() {
         this.likeCount++;
     }

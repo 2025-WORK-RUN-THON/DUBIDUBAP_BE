@@ -60,15 +60,19 @@ public class LogoSongController {
 
     @GetMapping
     @Operation(
-        summary = "로고송 목록 조회",
-        description = "로고송 목록을 페이지네이션으로 조회합니다.\n\n" +
+        summary = "전시회 목록 조회",
+        description = "전시회(공개) 로고송 목록을 페이지네이션으로 조회합니다.\n\n" +
+                "설명:\n" +
+                "- 전시회 목록은 공개(`isPublic=true`)로 설정된 로고송만 노출됩니다.\n" +
+                "- 비공개(`isPublic=false`) 로고송은 소유자 외에는 목록과 단건 모두 노출되지 않습니다.\n" +
+                "- 로그인한 경우, 각 항목의 좋아요 여부(`isLiked`)가 반영됩니다.\n\n" +
                 "쿼리 파라미터:\n" +
                 "- page: 0부터 시작하는 페이지 번호 (예: 0)\n" +
                 "- size: 페이지 당 항목 수 (예: 10)\n" +
                 "- sort: 정렬 기준, 쉼표로 방향 지정 (예: createdAt,desc)"
     )
     @ApiSuccessResponse(
-            message = "로고송 목록 조회가 성공적으로 처리되었습니다.",
+            message = "전시회(공개) 목록 조회가 성공적으로 처리되었습니다.",
             dataType = PagedResponse.class,
             isArray = true,
             dataExample = "{\n  'content': [\n    { 'id': 1, 'serviceName': '카페 뒤비뒤밥', 'likeCount': 12, 'isLiked': true },\n    { 'id': 2, 'serviceName': '분식 더밥', 'likeCount': 5, 'isLiked': null }\n  ],\n  'pagination': { 'limit': 10, 'currentPage': 1, 'totalPage': 5 }\n}"
@@ -97,6 +101,7 @@ public class LogoSongController {
     }
 
     @GetMapping("/popular")
+    @SecurityRequirement(name = "JWT")
     @Operation(summary = "인기 로고송 조회", description = "좋아요 수가 많은 순으로 로고송을 조회합니다.")
     @ApiSuccessResponse(message = "인기 로고송 목록 조회가 성공적으로 처리되었습니다.", dataType = PagedResponse.class, isArray = true)
     @ApiErrorExamples({
@@ -123,6 +128,7 @@ public class LogoSongController {
 
     @PostMapping("/guides")
     @ResponseStatus(HttpStatus.CREATED)
+    @SecurityRequirement(name = "JWT")
     @Operation(
         summary = "가사 생성", 
         description = "브랜드 정보를 기반으로 LogoSong 엔티티를 생성한 뒤 OpenAI API로 '가사만' 생성하여 저장하고, 업데이트된 전체 레코드를 반환합니다. 비디오 가이드라인은 생성하지 않습니다."
@@ -140,8 +146,13 @@ public class LogoSongController {
     })
     public ApiResponse<LogoSongResponse> generateGuides(
         @Parameter(description = "로고송 생성 요청 정보 - 브랜드 및 음악 스타일 정보 포함", required = true)
-        @Valid @RequestBody LogoSongCreateRequest request) {
-        LogoSongResponse response = integratedLogoSongService.createLogoSongWithGuidesOnly(request);
+        @Valid @RequestBody LogoSongCreateRequest request,
+        @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        Long userId = userPrincipal != null ? userPrincipal.getId() : null;
+        if (userId == null) {
+            return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+        LogoSongResponse response = integratedLogoSongService.createLogoSongWithGuidesOnly(request, userId);
         return ApiResponse.successCreated(response);
     }
 
@@ -163,6 +174,23 @@ public class LogoSongController {
         }
         logoSongService.toggleLike(id, userPrincipal.getId());
         return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{id}/visibility")
+    @SecurityRequirement(name = "JWT")
+    @Operation(summary = "로고송 공개 여부 변경", description = "본인 로고송의 공개 여부를 변경합니다. 기본값은 비공개(false)입니다.")
+    @ApiSuccessResponse(message = "공개 여부가 성공적으로 변경되었습니다.")
+    public ApiResponse<Void> updateVisibility(
+            @Parameter(description = "로고송 ID") @PathVariable Long id,
+            @Parameter(description = "공개 여부", required = true) @RequestParam("public") boolean publicVisible,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        // 사용자 소유 검증 로직은 추후 userId가 모델에 포함될 때 강화 가능
+        Long userId = userPrincipal != null ? userPrincipal.getId() : null;
+        if (userId == null) {
+            return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+        logoSongService.updateVisibility(id, publicVisible, userId);
+        return ApiResponse.success();
     }
 
     
@@ -213,6 +241,7 @@ public class LogoSongController {
 
     @PostMapping("/with-generation")
     @ResponseStatus(HttpStatus.CREATED)
+    @SecurityRequirement(name = "JWT")
     @Operation(summary = "로고송 생성 (가사+음악 통합)", description = "가사/비디오 가이드라인 생성 후 음악 생성을 비동기로 시작합니다.")
     @ApiSuccessResponse(message = "로고송 생성이 시작되었습니다.", dataType = LogoSongResponse.class, httpStatus = 201)
     @ApiErrorExamples({
@@ -223,12 +252,18 @@ public class LogoSongController {
             ErrorCode.LYRICS_GENERATION_FAILED
     })
     public ApiResponse<LogoSongResponse> createLogoSongWithGeneration(
-            @Valid @RequestBody LogoSongCreateRequest request) {
-        LogoSongResponse response = integratedLogoSongService.createLogoSongWithGeneration(request);
+            @Valid @RequestBody LogoSongCreateRequest request,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        Long userId = userPrincipal != null ? userPrincipal.getId() : null;
+        if (userId == null) {
+            return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+        LogoSongResponse response = integratedLogoSongService.createLogoSongWithGeneration(request, userId);
         return ApiResponse.successCreated(response);
     }
 
     @PostMapping("/{id}/generate-music")
+    @SecurityRequirement(name = "JWT")
     @Operation(summary = "음악 생성 트리거", 
            description = "기존 로고송에 대해 음악 생성을 시작합니다.\n\n" +
                    "처리 과정:\n" +
@@ -244,7 +279,8 @@ public class LogoSongController {
             ErrorCode.LYRICS_GENERATION_FAILED
     })
     public ApiResponse<Void> generateMusic(
-            @Parameter(description = "로고송 ID") @PathVariable Long id) {
+            @Parameter(description = "로고송 ID") @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         integratedLogoSongService.triggerMusicGeneration(id);
         return ApiResponse.success();
     }
@@ -264,6 +300,7 @@ public class LogoSongController {
     
 
     @PostMapping("/{id}/regenerate-lyrics")
+    @SecurityRequirement(name = "JWT")
     @Operation(summary = "가사 재생성", 
                description = "기존 로고송의 가사만 재생성합니다.\n\n" +
                        "처리 과정:\n" +
@@ -280,12 +317,14 @@ public class LogoSongController {
     })
     public ApiResponse<LogoSongResponse> regenerateLyrics(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
-            @Valid @RequestBody LogoSongCreateRequest request) {
+            @Valid @RequestBody LogoSongCreateRequest request,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         LogoSongResponse updated = integratedLogoSongService.regenerateLyricsOnly(id, request);
         return ApiResponse.success(updated);
     }
 
     @PostMapping("/{id}/regenerate-video-guide")
+    @SecurityRequirement(name = "JWT")
     @Operation(summary = "비디오 가이드라인 (재)생성",
                description = "기존 로고송 ID 기반으로 비디오 가이드라인만 생성/재생성합니다. 사용자 입력은 이미 DB에 저장되어 있으므로 추가 요청 본문이 필요하지 않습니다.")
     @ApiSuccessResponse(message = "비디오 가이드라인 (재)생성이 성공적으로 처리되었습니다.", dataType = LogoSongResponse.class)
@@ -294,7 +333,8 @@ public class LogoSongController {
             ErrorCode.LYRICS_GENERATION_FAILED
     })
     public ApiResponse<LogoSongResponse> regenerateVideoGuide(
-            @Parameter(description = "로고송 ID") @PathVariable Long id) {
+            @Parameter(description = "로고송 ID") @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         LogoSongResponse updated = integratedLogoSongService.regenerateVideoGuideOnly(id);
         return ApiResponse.success(updated);
     }
@@ -303,38 +343,5 @@ public class LogoSongController {
 
     // =========================== Suno API 콜백 엔드포인트 ===========================
 
-    @PostMapping("/suno-callback")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Suno API 콜백 처리", 
-               description = "Suno API에서 음악 생성 완료 시 호출하는 콜백 엔드포인트입니다.")
-    @ApiSuccessResponse(message = "콜백 처리가 성공적으로 완료되었습니다.")
-    @ApiErrorExamples({
-            ErrorCode.INVALID_INPUT_VALUE,
-            ErrorCode.SUNO_TASK_NOT_FOUND
-    })
-    public ApiResponse<Void> handleSunoCallback(
-            @Parameter(description = "Suno API 콜백 데이터", required = true)
-            @RequestBody Map<String, Object> callbackData) {
-        log.info("Suno API 콜백 수신: {}", callbackData);
-        
-        try {
-            // 콜백 데이터에서 taskId와 상태 정보 추출
-            String taskId = (String) callbackData.get("taskId");
-            String status = (String) callbackData.get("status");
-            
-            if (taskId == null) {
-                log.error("콜백 데이터에 taskId가 없습니다: {}", callbackData);
-                return ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE);
-            }
-            
-            // 서비스에서 콜백 처리
-            // TODO: 실제 콜백 데이터 구조에 맞게 처리 로직 구현
-            log.info("Suno 콜백 처리 완료: taskId={}, status={}", taskId, status);
-            
-            return ApiResponse.success();
-        } catch (Exception e) {
-            log.error("Suno 콜백 처리 중 오류 발생", e);
-            return ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-    }
+    // Suno 콜백은 별도 SunoCallbackController에서 처리
 }

@@ -48,7 +48,10 @@ public class SunoGenerateRequest {
     @JsonProperty("audioWeight")
     private Double audioWeight;
 
-    public static SunoGenerateRequest of(String prompt, String style, String title, String model, String callBackUrl) {
+    @JsonProperty("duration")
+    private Integer duration;
+
+    public static SunoGenerateRequest of(String prompt, String style, String title, String model, String callBackUrl, Integer duration) {
         return SunoGenerateRequest.builder()
                 .customMode(true)
                 .instrumental(false)
@@ -61,11 +64,17 @@ public class SunoGenerateRequest {
                 .styleWeight(0.65)
                 .weirdnessConstraint(0.65)
                 .audioWeight(0.65)
+                .duration(duration)
                 .build();
     }
 
     // Backward compatibility for existing tests/usages without callback URL
     public static SunoGenerateRequest of(String prompt, String style, String title, String model) {
-        return of(prompt, style, title, model, null);
+        return of(prompt, style, title, model, null, null);
+    }
+
+    // Backward compatibility for existing tests/usages with callback URL but without duration
+    public static SunoGenerateRequest of(String prompt, String style, String title, String model, String callBackUrl) {
+        return of(prompt, style, title, model, callBackUrl, null);
     }
 }

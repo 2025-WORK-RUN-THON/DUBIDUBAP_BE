@@ -44,8 +44,10 @@ jobs:
       - name: Compress JAR with tar.gz # jar 파일 압축
         run: |
           mkdir -p package
-          cp build/libs/*.jar package/
-          tar --use-compress-program="gzip -1" -cf guineafigma-app.tar.gz -C package .
+          JAR=$(ls -1 build/libs/*-SNAPSHOT.jar | grep -v plain | head -n 1)
+          echo "Packaging JAR: $JAR"
+          cp "$JAR" package/guineafigma-server.jar
+          tar --use-compress-program="gzip -1" -cf guineafigma-app.tar.gz -C package guineafigma-server.jar
           echo "생성된 아티팩트:" && ls -lh guineafigma-app.tar.gz
         shell: bash
 
@@ -97,73 +99,63 @@ jobs:
           scp -i private_key.pem -o StrictHostKeyChecking=no .env $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/.env
 
           # EC2에서 압축 해제 후 실행
-          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'EOF'
-            set -euo pipefail
-            U="$(whoami)"
-            cd "/home/$U"
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'REMOTE'
+          set -euo pipefail
+          U="$(whoami)"
+          cd "/home/$U"
 
-            # Java 21 설치 (없으면 설치) - Amazon Linux (dnf/yum)
-            if ! command -v java >/dev/null 2>&1; then
-              if command -v dnf >/dev/null 2>&1; then
-                sudo dnf install -y java-21-amazon-corretto-headless || sudo dnf install -y java-21-openjdk || true
-              elif command -v yum >/dev/null 2>&1; then
-                sudo yum install -y java-21-amazon-corretto-headless || sudo yum install -y java-21-openjdk || true
-              else
-                echo "No supported package manager found (dnf/yum). Please install Java 21 manually." >&2
-                exit 1
-              fi
+          # Java 21 설치 보장
+          if ! command -v java >/dev/null 2>&1; then
+            if command -v dnf >/dev/null 2>&1; then sudo dnf install -y java-21-amazon-corretto-headless || sudo dnf install -y java-21-openjdk;
+            elif command -v yum >/dev/null 2>&1; then sudo yum install -y java-21-amazon-corretto-headless || sudo dnf install -y java-21-openjdk || sudo yum install -y java-21-openjdk;
+            else echo "Install Java 21 first"; exit 1; fi
+          fi
+
+          # 기존 서비스 중지
+          if systemctl list-units --type=service --all | grep -q '^guineafigma.service'; then
+            sudo systemctl stop guineafigma || true
+          fi
+
+          # 압축 해제(단일 JAR: guineafigma-server.jar)
+          rm -rf guineafigma-app
+          mkdir -p guineafigma-app
+          tar -xzf guineafigma-app.tar.gz -C guineafigma-app
+          abs_jar="/home/$U/guineafigma-app/guineafigma-server.jar"
+          test -f "$abs_jar" || { echo "Error: JAR not found at $abs_jar"; ls -lah guineafigma-app; exit 1; }
+
+          # systemd 유닛 완성본 생성 (printf 사용: YAML/쉘 heredoc 충돌 회피)
+          sudo bash -c 'printf "%s\n" \
+            "[Unit]" \
+            "Description=Guineafigma Spring Boot Service" \
+            "After=network-online.target" \
+            "Wants=network-online.target" \
+            "" \
+            "[Service]" \
+            "User='$U'" \
+            "WorkingDirectory=/home/'$U'" \
+            "EnvironmentFile=/home/'$U'/.env" \
+            "ExecStart=/usr/bin/java -jar '$abs_jar'" \
+            "SuccessExitStatus=143" \
+            "Restart=always" \
+            "RestartSec=10" \
+            "LimitNOFILE=65536" \
+            "" \
+            "[Install]" \
+            "WantedBy=multi-user.target" \
+            > /etc/systemd/system/guineafigma.service'
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable guineafigma || true
+          sudo systemctl restart guineafigma
+
+          # 헬스 체크(최대 5회 재시도)
+          for i in 1 2 3 4 5; do
+            sleep 3
+            if curl -fsS http://localhost:8080/api/v1/system/health >/dev/null; then
+              echo "Health OK"; exit 0
             fi
-
-            # 기존 서비스 중지 (있을 때만)
-            if systemctl list-units --type=service --all | grep -q '^guineafigma.service'; then
-              sudo systemctl stop guineafigma || true
-            fi
-
-            # 이전 파일 정리 및 압축 해제
-            rm -rf guineafigma-app
-            if [ ! -f guineafigma-app.tar.gz ]; then
-              echo "Error: guineafigma-app.tar.gz not found"
-              exit 1
-            fi
-            mkdir -p guineafigma-app
-            tar -xzf guineafigma-app.tar.gz -C guineafigma-app
-
-            # 최신 JAR 파일 경로 확인 (-plain.jar 제외)
-            latest_jar=$(ls -1t guineafigma-app/*-SNAPSHOT.jar 2>/dev/null | grep -v 'plain' | head -n 1)
-            if [ -z "$latest_jar" ]; then
-              echo "Error: No JAR found after extraction"
-              exit 1
-            fi
-            abs_jar="/home/$U/$latest_jar"
-
-            # systemd 유닛 생성/갱신 (YAML 들여쓰기 → 좌측 공백 제거 후 파일로 저장)
-            cat <<'SERVICE' | sed -e 's/^\s\{12\}//' | sudo tee /etc/systemd/system/guineafigma.service > /dev/null
-            [Unit]
-            Description=Guineafigma Spring Boot Service
-            After=network-online.target
-            Wants=network-online.target
-
-            [Service]
-            User=%i
-            WorkingDirectory=/home/%i
-            EnvironmentFile=/home/%i/.env
-            ExecStart=/usr/bin/java -jar __ABS_JAR__
-            Restart=always
-            RestartSec=10
-            SuccessExitStatus=143
-            LimitNOFILE=65536
-
-            [Install]
-            WantedBy=multi-user.target
-            SERVICE
-
-            # 자리표시자 치환 (사용자/경로)
-            sudo sed -i -e "s|%i|$U|g" -e "s|__ABS_JAR__|$abs_jar|g" /etc/systemd/system/guineafigma.service
-
-            sudo systemctl daemon-reload
-            sudo systemctl enable guineafigma || true
-            sudo systemctl restart guineafigma
-            sudo systemctl --no-pager status guineafigma | sed -n '1,80p'
-          EOF
+          done
+          echo "Health check failed"; journalctl -u guineafigma -n 200 | tail -n 200; exit 1
+          REMOTE
 
           rm -f private_key.pem .env

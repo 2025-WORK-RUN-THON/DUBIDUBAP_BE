@@ -57,12 +57,15 @@ public class SunoApiService {
             // 2. 콜백 URL 설정 (더미 URL 사용 - 폴링 방식으로 상태 확인)
             String callBackUrl = "https://dummy-callback.com";
 
-            log.info("Suno API 음악 생성 시작: logoSongId={}, title={}", logoSong.getId(), title);
+            // 3. VersionType에 따른 duration 설정
+            Integer duration = getVersionDurationSeconds(logoSong.getVersion());
 
-            // 3. Suno API 요청 생성
-            SunoGenerateRequest request = SunoGenerateRequest.of(prompt, style, title, model, callBackUrl);
+            log.info("Suno API 음악 생성 시작: logoSongId={}, title={}, duration={}초", logoSong.getId(), title, duration);
 
-            // 4. Suno API 호출
+            // 4. Suno API 요청 생성 (duration 포함)
+            SunoGenerateRequest request = SunoGenerateRequest.of(prompt, style, title, model, callBackUrl, duration);
+
+            // 5. Suno API 호출
             SunoGenerateResponse response = sunoApiClient.generateMusic(request);
             
             if (response.getId() != null) {
@@ -71,7 +74,7 @@ public class SunoApiService {
                 logoSong.updateMusicStatus(MusicGenerationStatus.PROCESSING);
                 logoSongRepository.save(logoSong);
                 
-                log.info("Suno API 음악 생성 요청 성공: logoSongId={}, taskId={}", logoSong.getId(), response.getId());
+                log.info("Suno API 음악 생성 요청 성공: logoSongId={}, taskId={}, duration={}초", logoSong.getId(), response.getId(), duration);
                 return response.getId();
             } else {
                 throw new BusinessException(ErrorCode.MUSIC_GENERATION_FAILED);
@@ -177,7 +180,6 @@ public class SunoApiService {
         prompt.append("\nMUSICAL REQUIREMENTS:\n");
         prompt.append("- Genre: ").append(logoSong.getMusicGenre()).append("\n");
         prompt.append("- Mood: ").append(logoSong.getMoodTone() != null ? logoSong.getMoodTone() : "upbeat and memorable").append("\n");
-        prompt.append("- Duration: ").append(getVersionDuration(logoSong.getVersion())).append("\n");
         prompt.append("- BPM: ").append(calculateBPM(logoSong.getMusicGenre())).append("\n");
         prompt.append("- Key: ").append(suggestKey(logoSong.getMoodTone())).append("\n");
 
@@ -245,15 +247,7 @@ public class SunoApiService {
         return "V3_5";
     }
 
-    private String getVersionDuration(Object version) {
-        if (version == null) return "30 seconds";
-        String versionStr = version.toString();
-        return switch (versionStr.toUpperCase()) {
-            case "SHORT" -> "15 seconds";
-            case "LONG" -> "60 seconds";
-            default -> "30 seconds";
-        };
-    }
+
 
     private int calculateBPM(Object genre) {
         if (genre == null) return 120;
@@ -298,6 +292,16 @@ public class SunoApiService {
             case "CLASSICAL" -> "Orchestral arrangement with traditional instruments, elegant composition";
             case "DANCE" -> "Upbeat dance track with electronic elements, energetic rhythm, club-ready sound";
             default -> "Create a modern, versatile commercial jingle with professional production quality";
+        };
+    }
+
+    private Integer getVersionDurationSeconds(Object version) {
+        if (version == null) return 30;
+        String versionStr = version.toString();
+        return switch (versionStr.toUpperCase()) {
+            case "SHORT" -> 15;
+            case "LONG" -> 60;
+            default -> 30;
         };
     }
 }
