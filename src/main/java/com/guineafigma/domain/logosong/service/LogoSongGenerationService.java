@@ -166,9 +166,7 @@ public class LogoSongGenerationService {
         }
     }
 
-    /**
-     * 진행 중인 모든 음악 생성 작업의 상태를 확인하는 배치 작업
-     */
+    // 진행 중인 모든 음악 생성 작업의 상태를 확인하는 배치 작업
     @Async("musicGenerationExecutor")
     public void checkAllProcessingTasks() {
         try {

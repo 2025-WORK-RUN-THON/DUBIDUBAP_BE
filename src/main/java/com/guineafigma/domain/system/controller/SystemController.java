@@ -11,6 +11,7 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +34,7 @@ public class SystemController {
             ErrorCode.INTERNAL_SERVER_ERROR,
     })
     @GetMapping("/health")
-    public ApiResponse<Map<String, Object>> health() {
+    public ApiResponse<Map<String, Object>> health(HttpServletRequest request) {
         Map<String, Object> healthInfo = new HashMap<>();
         String dbStatus = "UNKNOWN";
         try (Connection conn = dataSource.getConnection()) {
@@ -50,7 +51,15 @@ public class SystemController {
         healthInfo.put("timestamp", System.currentTimeMillis());
         healthInfo.put("service", "dubidubap server");
 
-        return ApiResponse.success("서비스가 정상적으로 동작 중입니다.", healthInfo);
+        // ApiResponse에 path 포함하여 반환
+        return ApiResponse.<Map<String, Object>>builder()
+                .timestamp(java.time.LocalDateTime.now())
+                .status(200)
+                .code("SUCCESS")
+                .message("서비스가 정상적으로 동작 중입니다.")
+                .path(request.getRequestURI())
+                .data(healthInfo)
+                .build();
     }
 
     // removed test endpoints

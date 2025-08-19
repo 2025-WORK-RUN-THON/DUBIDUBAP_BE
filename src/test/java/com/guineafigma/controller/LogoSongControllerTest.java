@@ -12,11 +12,13 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.*;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -53,30 +55,32 @@ class LogoSongControllerTest {
     @BeforeEach
     void setUp() {
         baseUrl = "http://localhost:" + port;
-        System.out.println("🚀 LogoSong 테스트 서버 시작: " + baseUrl);
+        System.out.println("LogoSong 테스트 서버 시작: " + baseUrl);
     }
 
     @Test
     @DisplayName("로고송 조회 - 실제 API 호출")
     void getLogoSong_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/1",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 로고송 조회 응답 상태: " + response.getStatusCode());
-        System.out.println("🔍 로고송 조회 응답 본문: " + response.getBody());
+                    System.out.println("로고송 조회 응답 상태: " + response.getStatusCode());
+            System.out.println("로고송 조회 응답 본문: " + response.getBody());
         
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             // API가 응답했다면 성공
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 로고송 조회 API 실제 응답 확인 완료!");
+            System.out.println("로고송 조회 API 실제 응답 확인 완료!");
         }
     }
 
@@ -84,22 +88,24 @@ class LogoSongControllerTest {
     @DisplayName("로고송 목록 조회 - 실제 API 호출")
     void getAllLogoSongs_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs?page=0&size=10",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs?page=0&size=10",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 로고송 목록 응답 상태: " + response.getStatusCode());
-        System.out.println("🔍 로고송 목록 응답 본문: " + response.getBody());
+                    System.out.println("로고송 목록 응답 상태: " + response.getStatusCode());
+            System.out.println("로고송 목록 응답 본문: " + response.getBody());
         
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 로고송 목록 조회 API 실제 응답 확인 완료!");
+            System.out.println("로고송 목록 조회 API 실제 응답 확인 완료!");
         }
     }
 
@@ -107,20 +113,22 @@ class LogoSongControllerTest {
     @DisplayName("인기 로고송 조회 - 실제 API 호출")
     void getPopularLogoSongs_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/popular?page=0&size=10",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/popular?page=0&size=10",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 인기 로고송 응답 상태: " + response.getStatusCode());
+                    System.out.println("인기 로고송 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 인기 로고송 조회 API 실제 응답 확인 완료!");
+            System.out.println("인기 로고송 조회 API 실제 응답 확인 완료!");
         }
     }
 
@@ -135,24 +143,24 @@ class LogoSongControllerTest {
         HttpEntity<LogoSongCreateRequest> httpRequest = new HttpEntity<>(request, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/guides",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/guides",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 가이드라인 생성 응답 상태: " + response.getStatusCode());
-        System.out.println("🔍 가이드라인 생성 응답 본문: " + response.getBody());
+                    System.out.println("가이드라인 생성 응답 상태: " + response.getStatusCode());
+            System.out.println("가이드라인 생성 응답 본문: " + response.getBody());
         
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 가이드라인 생성 API 실제 응답 확인 완료!");
+            System.out.println("가이드라인 생성 API 실제 응답 확인 완료!");
         }
     }
 
@@ -167,22 +175,22 @@ class LogoSongControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(invalidJson, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/guides",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/guides",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 잘못된 데이터 응답 상태: " + response.getStatusCode());
+                    System.out.println("잘못된 데이터 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("error") || body.containsKey("timestamp"));
-            System.out.println("✅ 잘못된 데이터 검증 오류 API 실제 응답 확인 완료!");
+            System.out.println("잘못된 데이터 검증 오류 API 실제 응답 확인 완료!");
         }
     }
 
@@ -197,22 +205,22 @@ class LogoSongControllerTest {
         HttpEntity<LogoSongCreateRequest> httpRequest = new HttpEntity<>(request, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/with-generation",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/with-generation",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 통합 로고송 생성 응답 상태: " + response.getStatusCode());
+                    System.out.println("통합 로고송 생성 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 통합 로고송 생성 API 실제 응답 확인 완료!");
+            System.out.println("통합 로고송 생성 API 실제 응답 확인 완료!");
         }
     }
 
@@ -220,20 +228,22 @@ class LogoSongControllerTest {
     @DisplayName("음악 생성 상태 확인 - 실제 API 호출")
     void getMusicGenerationStatus_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/1/generation-status",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/generation-status",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 음악 생성 상태 응답 상태: " + response.getStatusCode());
+                    System.out.println("음악 생성 상태 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 음악 생성 상태 API 실제 응답 확인 완료!");
+            System.out.println("음악 생성 상태 API 실제 응답 확인 완료!");
         }
     }
 
@@ -241,20 +251,22 @@ class LogoSongControllerTest {
     @DisplayName("폴링 상태 확인 - 실제 API 호출")
     void getPollingStatus_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/1/polling-status",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/polling-status",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 폴링 상태 응답 상태: " + response.getStatusCode());
+                    System.out.println("폴링 상태 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 폴링 상태 API 실제 응답 확인 완료!");
+            System.out.println("폴링 상태 API 실제 응답 확인 완료!");
         }
     }
 
@@ -262,20 +274,22 @@ class LogoSongControllerTest {
     @DisplayName("빠른 상태 확인 - 실제 API 호출")
     void getQuickStatus_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/1/quick-status",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/quick-status",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 빠른 상태 응답 상태: " + response.getStatusCode());
+                    System.out.println("빠른 상태 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
-            Map<String, Object> body = response.getBody();
+            Map<String, Object> body = Objects.requireNonNull(response.getBody());
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 빠른 상태 API 실제 응답 확인 완료!");
+            System.out.println("빠른 상태 API 실제 응답 확인 완료!");
         }
     }
 
@@ -283,37 +297,41 @@ class LogoSongControllerTest {
     @DisplayName("잘못된 ID 형식 - 실제 API 호출")
     void getLogoSong_InvalidIdFormat_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/invalid",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/invalid",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 잘못된 ID 응답 상태: " + response.getStatusCode());
+                    System.out.println("잘못된 ID 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         // 400 또는 다른 에러 상태 코드면 정상
         assertTrue(response.getStatusCode().is4xxClientError() || response.getStatusCode().is5xxServerError());
-        System.out.println("✅ 잘못된 ID 처리 확인 완료!");
+                    System.out.println("잘못된 ID 처리 확인 완료!");
     }
 
     @Test
     @DisplayName("잘못된 페이지 파라미터 - 실제 API 호출")
     void getAllLogoSongs_InvalidPageParams_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs?page=-1&size=0",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs?page=-1&size=0",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 잘못된 파라미터 응답 상태: " + response.getStatusCode());
+                    System.out.println("잘못된 파라미터 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         // 400 또는 다른 에러 상태 코드면 정상
         assertTrue(response.getStatusCode().is4xxClientError() || response.getStatusCode().is5xxServerError());
-        System.out.println("✅ 잘못된 페이지 파라미터 처리 확인 완료!");
+                    System.out.println("잘못된 페이지 파라미터 처리 확인 완료!");
     }
 }

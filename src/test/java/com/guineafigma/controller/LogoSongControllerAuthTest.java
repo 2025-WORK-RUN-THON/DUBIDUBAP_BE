@@ -12,6 +12,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.*;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,29 +54,30 @@ class LogoSongControllerAuthTest {
     @BeforeEach
     void setUp() {
         baseUrl = "http://localhost:" + port;
-        System.out.println("🚀 LogoSong 인증 테스트 서버 시작: " + baseUrl);
+        System.out.println("LogoSong 인증 테스트 서버 시작: " + baseUrl);
     }
 
     @Test
     @DisplayName("좋아요 토글 - 인증 없이 시도")
     void toggleLike_NoAuth_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                baseUrl + "/logosongs/1/like",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/like",
+                HttpMethod.POST,
                 null,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 좋아요 토글 (인증 없음) 응답 상태: " + response.getStatusCode());
+                    System.out.println("좋아요 토글 (인증 없음) 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         // 인증 오류 응답이면 정상
         if (response.getStatusCode() == HttpStatus.UNAUTHORIZED || response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            System.out.println("✅ 인증 없는 좋아요 토글 에러 응답 확인 완료!");
+            System.out.println("인증 없는 좋아요 토글 에러 응답 확인 완료!");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
+            System.out.println("예상과 다른 응답: " + response.getStatusCode());
         }
     }
 
@@ -83,21 +85,23 @@ class LogoSongControllerAuthTest {
     @DisplayName("좋아요 상태 확인 - 인증 없이 시도")
     void getLikeStatus_NoAuth_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/1/like-status",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/like-status",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 좋아요 상태 확인 (인증 없음) 응답 상태: " + response.getStatusCode());
+        System.out.println("좋아요 상태 확인 (인증 없음) 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         // 인증 오류 응답이면 정상
         if (response.getStatusCode() == HttpStatus.UNAUTHORIZED || response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            System.out.println("✅ 인증 없는 좋아요 상태 확인 에러 응답 확인 완료!");
+            System.out.println("인증 없는 좋아요 상태 확인 에러 응답 확인 완료!");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
+            System.out.println("예상과 다른 응답: " + response.getStatusCode());
         }
     }
 
@@ -105,21 +109,23 @@ class LogoSongControllerAuthTest {
     @DisplayName("내 로고송 목록 조회 - 인증 없이 시도")
     void getMyLogoSongs_NoAuth_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/my",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/my",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 내 로고송 목록 (인증 없음) 응답 상태: " + response.getStatusCode());
+        System.out.println("내 로고송 목록 (인증 없음) 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         // 인증 오류 응답이면 정상
         if (response.getStatusCode() == HttpStatus.UNAUTHORIZED || response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            System.out.println("✅ 인증 없는 내 로고송 목록 에러 응답 확인 완료!");
+            System.out.println("인증 없는 내 로고송 목록 에러 응답 확인 완료!");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
+            System.out.println("예상과 다른 응답: " + response.getStatusCode());
         }
     }
 
@@ -127,21 +133,23 @@ class LogoSongControllerAuthTest {
     @DisplayName("좋아요한 로고송 목록 조회 - 인증 없이 시도")
     void getLikedLogoSongs_NoAuth_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs/my/liked",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/my/liked",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 좋아요한 로고송 목록 (인증 없음) 응답 상태: " + response.getStatusCode());
+        System.out.println("좋아요한 로고송 목록 (인증 없음) 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         // 인증 오류 응답이면 정상
         if (response.getStatusCode() == HttpStatus.UNAUTHORIZED || response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            System.out.println("✅ 인증 없는 좋아요한 로고송 목록 에러 응답 확인 완료!");
+            System.out.println("인증 없는 좋아요한 로고송 목록 에러 응답 확인 완료!");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
+            System.out.println("예상과 다른 응답: " + response.getStatusCode());
         }
     }
 
@@ -156,22 +164,22 @@ class LogoSongControllerAuthTest {
         HttpEntity<LogoSongCreateRequest> httpRequest = new HttpEntity<>(request, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/1/regenerate-lyrics",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/regenerate-lyrics",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 가사 재생성 응답 상태: " + response.getStatusCode());
+        System.out.println("가사 재생성 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 가사 재생성 API 실제 응답 확인 완료!");
+            System.out.println("가사 재생성 API 실제 응답 확인 완료!");
         }
     }
 
@@ -186,22 +194,22 @@ class LogoSongControllerAuthTest {
         HttpEntity<LogoSongCreateRequest> httpRequest = new HttpEntity<>(request, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/1/regenerate-video-guide",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/regenerate-video-guide",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 비디오 가이드라인 재생성 응답 상태: " + response.getStatusCode());
+        System.out.println("비디오 가이드라인 재생성 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 비디오 가이드라인 재생성 API 실제 응답 확인 완료!");
+            System.out.println("비디오 가이드라인 재생성 API 실제 응답 확인 완료!");
         }
     }
 
@@ -209,21 +217,22 @@ class LogoSongControllerAuthTest {
     @DisplayName("음악 생성 트리거 - 실제 API 호출")
     void generateMusic_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                baseUrl + "/logosongs/1/generate-music",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/1/generate-music",
+                HttpMethod.POST,
                 null,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 음악 생성 트리거 응답 상태: " + response.getStatusCode());
+        System.out.println("음악 생성 트리거 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ 음악 생성 트리거 API 실제 응답 확인 완료!");
+            System.out.println("음악 생성 트리거 API 실제 응답 확인 완료!");
         }
     }
 
@@ -238,22 +247,22 @@ class LogoSongControllerAuthTest {
         HttpEntity<LogoSongCreateRequest> httpRequest = new HttpEntity<>(request, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/99999/regenerate-lyrics",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/99999/regenerate-lyrics",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 존재하지 않는 로고송 가사 재생성 응답 상태: " + response.getStatusCode());
+        System.out.println("존재하지 않는 로고송 가사 재생성 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("error") || body.containsKey("timestamp"));
-            System.out.println("✅ 존재하지 않는 로고송 에러 응답 확인 완료!");
+            System.out.println("존재하지 않는 로고송 에러 응답 확인 완료!");
         }
     }
 
@@ -261,21 +270,22 @@ class LogoSongControllerAuthTest {
     @DisplayName("존재하지 않는 로고송 ID로 음악 생성 시도")
     void generateMusic_NotFound_RealAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                baseUrl + "/logosongs/99999/generate-music",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/99999/generate-music",
+                HttpMethod.POST,
                 null,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 존재하지 않는 로고송 음악 생성 응답 상태: " + response.getStatusCode());
+        System.out.println("존재하지 않는 로고송 음악 생성 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("error") || body.containsKey("timestamp"));
-            System.out.println("✅ 존재하지 않는 로고송 음악 생성 에러 응답 확인 완료!");
+            System.out.println("존재하지 않는 로고송 음악 생성 에러 응답 확인 완료!");
         }
     }
 }

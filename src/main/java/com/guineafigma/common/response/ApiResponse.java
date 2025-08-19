@@ -65,6 +65,25 @@ public class ApiResponse<T> {
                 .build();
     }
 
+    public static <T> ApiResponse<T> successCreated() {
+        return ApiResponse.<T>builder()
+                .timestamp(LocalDateTime.now())
+                .status(201)
+                .code("SUCCESS")
+                .message("리소스가 성공적으로 생성되었습니다.")
+                .build();
+    }
+
+    public static <T> ApiResponse<T> successCreated(T data) {
+        return ApiResponse.<T>builder()
+                .timestamp(LocalDateTime.now())
+                .status(201)
+                .code("SUCCESS")
+                .message("리소스가 성공적으로 생성되었습니다.")
+                .data(data)
+                .build();
+    }
+
     public static <T> ApiResponse<T> error(int status, String code, String message) {
         return ApiResponse.<T>builder()
                 .timestamp(LocalDateTime.now())

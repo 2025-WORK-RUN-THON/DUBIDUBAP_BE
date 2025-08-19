@@ -225,7 +225,7 @@ public class SwaggerConfig {
     private void generateSuccessResponseExample(Operation operation, ApiSuccessResponse successMeta, String actualPath) {
         ApiResponses responses = operation.getResponses();
 
-        String successKey = "200";
+        String successKey = String.valueOf(successMeta.httpStatus());
         ApiResponse apiResponse = responses.get(successKey);
         if (apiResponse == null) {
             apiResponse = new ApiResponse();
@@ -248,7 +248,7 @@ public class SwaggerConfig {
 
         Map<String, Object> successResponse = new LinkedHashMap<>();
         successResponse.put("timestamp", "2025-06-30T12:00:00.000000");
-        successResponse.put("status", 200);
+        successResponse.put("status", successMeta.httpStatus());
         successResponse.put("code", "SUCCESS");
         successResponse.put("message", successMeta.message());
         successResponse.put("path", actualPath);
@@ -302,5 +302,6 @@ public class SwaggerConfig {
         Class<?> dataType() default Object.class;
         String dataExample() default "";
         boolean isArray() default false;
+        int httpStatus() default 200;
     }
 }

@@ -102,7 +102,7 @@ guineafigma의 Spring Boot 3.5.3 기반 백엔드 API 서버입니다.
 ## 💬 Issue Convention 💬
 
 1. **Feature**: 기능 추가 시 작성
-   - **Issue**: ✅ Feature
+   - **Issue**: Feature
    - **내용**: 작업하고자 하는 기능을 입력
    - **TODO**:
      - [ ] 구현 내용 입력
@@ -115,7 +115,7 @@ guineafigma의 Spring Boot 3.5.3 기반 백엔드 API 서버입니다.
    - **결과 확인**
    - **ETC**: 논의할 사항 작성
 3. **Refactor**: 리팩토링 작업 시 작성
-   - **Issue**: ♻️ Refactor
+   - **Issue**: Refactor
    - **내용**: 리팩토링이 필요한 부분 작성
    - **Before**: 변경 전 상태 및 이유 설명
    - **After**: 변경 후 예상되는 구조 설명

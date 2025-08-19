@@ -1,6 +1,7 @@
 package com.guineafigma.domain.logosong.service;
 
 import com.guineafigma.common.response.PagedResponse;
+import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
 import com.guineafigma.domain.logosong.dto.response.GuidesResponse;
 import com.guineafigma.domain.logosong.dto.response.LogoSongResponse;
@@ -23,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(readOnly = true)
 public class LogoSongService {
 
     private final LogoSongRepository logoSongRepository;
@@ -50,6 +50,43 @@ public class LogoSongService {
         log.info("로고송 생성 완료: {}", savedLogoSong.getId());
         
         return LogoSongResponse.from(savedLogoSong);
+    }
+
+    @Transactional
+    public LogoSongResponse updateLyricsAndVideoGuide(Long logoSongId, String lyrics, String videoGuideline) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        logoSong.updateLyrics(lyrics);
+        logoSong.updateVideoGuideline(videoGuideline);
+        LogoSong saved = logoSongRepository.save(logoSong);
+        return LogoSongResponse.from(saved);
+    }
+
+    @Transactional
+    public void setMusicStatus(Long logoSongId, MusicGenerationStatus status) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        logoSong.updateMusicStatus(status);
+        logoSongRepository.save(logoSong);
+    }
+
+    @Transactional
+    public LogoSongResponse updateLyricsOnlyAndSetPending(Long logoSongId, String lyrics) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        logoSong.updateLyrics(lyrics);
+        logoSong.updateMusicStatus(MusicGenerationStatus.PENDING);
+        LogoSong saved = logoSongRepository.save(logoSong);
+        return LogoSongResponse.from(saved);
+    }
+
+    @Transactional
+    public LogoSongResponse updateVideoGuidelineOnly(Long logoSongId, String videoGuideline) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        logoSong.updateVideoGuideline(videoGuideline);
+        LogoSong saved = logoSongRepository.save(logoSong);
+        return LogoSongResponse.from(saved);
     }
 
     @Transactional
@@ -88,6 +125,7 @@ public class LogoSongService {
         }
     }
 
+    @Transactional(readOnly = true)
     public LogoSongResponse getLogoSong(Long id) {
         LogoSong logoSong = logoSongRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -106,6 +144,7 @@ public class LogoSongService {
         return LogoSongResponse.from(savedLogoSong);
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<LogoSongResponse> getAllLogoSongs(Pageable pageable) {
         Page<LogoSong> logoSongPage = logoSongRepository.findAll(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(LogoSongResponse::from);
@@ -118,6 +157,7 @@ public class LogoSongService {
         );
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<LogoSongResponse> getPopularLogoSongs(Pageable pageable) {
         Page<LogoSong> logoSongPage = logoSongRepository.findByOrderByLikeCountDesc(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(LogoSongResponse::from);
@@ -130,6 +170,7 @@ public class LogoSongService {
         );
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<LogoSongResponse> getAllLogoSongs(Pageable pageable, Long userId) {
         Page<LogoSong> logoSongPage = logoSongRepository.findAll(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(logoSong -> {
@@ -148,6 +189,7 @@ public class LogoSongService {
         );
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<LogoSongResponse> getPopularLogoSongs(Pageable pageable, Long userId) {
         Page<LogoSong> logoSongPage = logoSongRepository.findByOrderByLikeCountDesc(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(logoSong -> {
@@ -166,6 +208,7 @@ public class LogoSongService {
         );
     }
 
+    @Transactional(readOnly = true)
     public LogoSongResponse getLogoSongWithLike(Long id, Long userId) {
         LogoSong logoSong = logoSongRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -201,10 +244,12 @@ public class LogoSongService {
         logoSongRepository.save(logoSong);
     }
 
+    @Transactional(readOnly = true)
     public boolean isLikedByUser(Long logoSongId, Long userId) {
         return logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSongId);
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<LogoSongResponse> getMyLogoSongs(Long userId, Pageable pageable) {
         // 미디어 엔티티에서 해당 사용자가 업로드한 로고송 ID들을 조회하는 방식으로 구현
         // 실제로는 LogoSong 엔티티에 userId 필드를 추가하는 것이 더 적절할 수 있음
@@ -219,6 +264,7 @@ public class LogoSongService {
         );
     }
 
+    @Transactional(readOnly = true)
     public PagedResponse<LogoSongResponse> getLikedLogoSongs(Long userId, Pageable pageable) {
         List<LogoSongLike> likedSongs = logoSongLikeRepository.findByUserId(userId);
         List<Long> logoSongIds = likedSongs.stream()

@@ -107,9 +107,7 @@ public class SunoApiClientTest {
         // credits가 null일 수 있음 (구현에 따라)
     }
 
-    /**
-     * 실제 음악 생성 플로우 테스트 (수동 실행 필요)
-     */
+    // 실제 음악 생성 플로우 테스트 (수동 실행 필요)
     @Test
     @Disabled("수동 실행 전용 - 실제 크레딧 소모")
     void testFullMusicGenerationFlow() throws InterruptedException {

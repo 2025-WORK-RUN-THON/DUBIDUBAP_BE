@@ -21,9 +21,7 @@ public class MusicGenerationPollingService {
     private final LogoSongRepository logoSongRepository;
     private final SunoApiService sunoApiService;
 
-    /**
-     * 웹 클라이언트 폴링을 위한 최적화된 상태 확인
-     */
+    // 웹 클라이언트 폴링을 위한 최적화된 상태 확인
     @Transactional
     public MusicGenerationStatusResponse getPollingStatus(Long logoSongId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
@@ -128,9 +126,7 @@ public class MusicGenerationPollingService {
         }
     }
 
-    /**
-     * 폴링 상태 확인 (간단 버전)
-     */
+    // 폴링 상태 확인 (간단 버전)
     @Transactional(readOnly = true)
     public MusicGenerationStatusResponse getQuickPollingStatus(Long logoSongId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
@@ -162,9 +158,7 @@ public class MusicGenerationPollingService {
         };
     }
 
-    /**
-     * 폴링 만료된 작업들 정리
-     */
+    // 폴링 만료된 작업들 정리
     @Transactional
     public void cleanupExpiredPolling() {
         LocalDateTime expiredTime = LocalDateTime.now().minusMinutes(30);

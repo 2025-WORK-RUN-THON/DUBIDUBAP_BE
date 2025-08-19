@@ -2,7 +2,6 @@ package com.guineafigma.domain.logosong.service;
 
 import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.domain.logosong.client.SunoApiClient;
-import com.guineafigma.domain.logosong.dto.request.SunoCallbackRequest;
 import com.guineafigma.domain.logosong.dto.request.SunoGenerateRequest;
 import com.guineafigma.domain.logosong.dto.response.MusicGenerationResult;
 import com.guineafigma.domain.logosong.dto.response.SunoGenerateResponse;
@@ -19,12 +18,10 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class SunoApiService {
 
     private final SunoApiClient sunoApiClient;
@@ -38,6 +35,7 @@ public class SunoApiService {
             maxAttempts = 3,
             backoff = @Backoff(delay = 2000, multiplier = 2)
     )
+    @Transactional
     public String generateMusic(LogoSong logoSong) {
         if (logoSong.getMusicStatus() == MusicGenerationStatus.PROCESSING) {
             // 이미 진행 중이면 기존 taskId를 그대로 반환하여 멱등성 보장
@@ -89,7 +87,6 @@ public class SunoApiService {
         }
     }
 
-    @Transactional(readOnly = true)
     public MusicGenerationResult checkMusicStatus(String taskId) {
         try {
             // 1) 우선 record-info로 상세 조회 (문서 권장)
@@ -132,7 +129,6 @@ public class SunoApiService {
         }
     }
 
-    @Transactional
     public void handleMusicGenerationCallback(String taskId, MusicGenerationResult result) {
         try {
             LogoSong logoSong = logoSongRepository.findBySunoTaskId(taskId)
@@ -155,9 +151,7 @@ public class SunoApiService {
         }
     }
 
-    /**
-     * 고급 프롬프트 엔지니어링 기법을 적용한 음악 생성 프롬프트 구축
-     */
+    // 고급 프롬프트 엔지니어링 기법을 적용한 음악 생성 프롬프트 구축
     private String buildAdvancedMusicPrompt(LogoSong logoSong) {
         StringBuilder prompt = new StringBuilder();
 

@@ -3,14 +3,12 @@ package com.guineafigma.domain.logosong.controller;
 import com.guineafigma.common.response.ApiResponse;
 import com.guineafigma.common.response.PagedResponse;
 import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
-import com.guineafigma.domain.logosong.dto.response.GuidesResponse;
 import com.guineafigma.domain.logosong.dto.response.LogoSongResponse;
 import com.guineafigma.domain.logosong.dto.response.MusicGenerationResult;
 import com.guineafigma.domain.logosong.dto.response.MusicGenerationStatusResponse;
 import com.guineafigma.domain.logosong.service.LogoSongService;
 import com.guineafigma.domain.logosong.service.IntegratedLogoSongService;
 import com.guineafigma.domain.logosong.service.MusicGenerationPollingService;
-import com.guineafigma.domain.logosong.service.LogoSongLyricsService;
 import com.guineafigma.global.config.SwaggerConfig.ApiErrorExamples;
 import com.guineafigma.global.config.SwaggerConfig.ApiSuccessResponse;
 import com.guineafigma.global.config.security.CustomUserPrincipal;
@@ -42,7 +40,6 @@ public class LogoSongController {
     private final LogoSongService logoSongService;
     private final IntegratedLogoSongService integratedLogoSongService;
     private final MusicGenerationPollingService pollingService;
-    private final LogoSongLyricsService logoSongLyricsService;
 
     
 
@@ -77,7 +74,7 @@ public class LogoSongController {
             message = "로고송 목록 조회가 성공적으로 처리되었습니다.",
             dataType = PagedResponse.class,
             isArray = true,
-            dataExample = "{\n  'items': [\n    { 'id': 1, 'serviceName': '카페 뒤비뒤밥', 'likeCount': 12, 'isLiked': true },\n    { 'id': 2, 'serviceName': '분식 더밥', 'likeCount': 5, 'isLiked': null }\n  ],\n  'size': 10,\n  'page': 1,\n  'totalPages': 5\n}"
+            dataExample = "{\n  'content': [\n    { 'id': 1, 'serviceName': '카페 뒤비뒤밥', 'likeCount': 12, 'isLiked': true },\n    { 'id': 2, 'serviceName': '분식 더밥', 'likeCount': 5, 'isLiked': null }\n  ],\n  'pagination': { 'limit': 10, 'currentPage': 1, 'totalPage': 5 }\n}"
     )
     @ApiErrorExamples({
             ErrorCode.INVALID_INPUT_VALUE
@@ -86,7 +83,13 @@ public class LogoSongController {
             @ParameterObject
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable,
+            @RequestParam(value = "page", required = false) Integer pageParam,
+            @RequestParam(value = "size", required = false) Integer sizeParam,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        // 쿼리 파라미터 원본 값 기준 검증: page>=0, size>0
+        if ((pageParam != null && pageParam < 0) || (sizeParam != null && sizeParam <= 0)) {
+            throw new com.guineafigma.global.exception.BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
         PagedResponse<LogoSongResponse> response;
         if (userPrincipal != null) {
             response = logoSongService.getAllLogoSongs(pageable, userPrincipal.getId());
@@ -106,7 +109,12 @@ public class LogoSongController {
             @ParameterObject
             @PageableDefault(size = 10, sort = "likeCount", direction = Sort.Direction.DESC)
             Pageable pageable,
+            @RequestParam(value = "page", required = false) Integer pageParam,
+            @RequestParam(value = "size", required = false) Integer sizeParam,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        if ((pageParam != null && pageParam < 0) || (sizeParam != null && sizeParam <= 0)) {
+            throw new com.guineafigma.global.exception.BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
         PagedResponse<LogoSongResponse> response;
         if (userPrincipal != null) {
             response = logoSongService.getPopularLogoSongs(pageable, userPrincipal.getId());
@@ -124,7 +132,8 @@ public class LogoSongController {
     )
     @ApiSuccessResponse(
         message = "가사/비디오 가이드라인 생성이 성공적으로 처리되었습니다.", 
-        dataType = LogoSongResponse.class
+        dataType = LogoSongResponse.class,
+        httpStatus = 201
     )
     @ApiErrorExamples({
         ErrorCode.VALIDATION_ERROR,
@@ -136,7 +145,7 @@ public class LogoSongController {
         @Parameter(description = "로고송 생성 요청 정보 - 브랜드 및 음악 스타일 정보 포함", required = true)
         @Valid @RequestBody LogoSongCreateRequest request) {
         LogoSongResponse response = integratedLogoSongService.createLogoSongWithGuidesOnly(request);
-        return ApiResponse.success(response);
+        return ApiResponse.successCreated(response);
     }
 
     @PostMapping("/{id}/like")
@@ -226,7 +235,7 @@ public class LogoSongController {
     @PostMapping("/with-generation")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "로고송 생성 (가사+음악 통합)", description = "가사/비디오 가이드라인 생성 후 음악 생성을 비동기로 시작합니다.")
-    @ApiSuccessResponse(message = "로고송 생성이 시작되었습니다.", dataType = LogoSongResponse.class)
+    @ApiSuccessResponse(message = "로고송 생성이 시작되었습니다.", dataType = LogoSongResponse.class, httpStatus = 201)
     @ApiErrorExamples({
             ErrorCode.VALIDATION_ERROR,
             ErrorCode.SERVICE_NAME_REQUIRED,
@@ -237,7 +246,7 @@ public class LogoSongController {
     public ApiResponse<LogoSongResponse> createLogoSongWithGeneration(
             @Valid @RequestBody LogoSongCreateRequest request) {
         LogoSongResponse response = integratedLogoSongService.createLogoSongWithGeneration(request);
-        return ApiResponse.success(response);
+        return ApiResponse.successCreated(response);
     }
 
     @PostMapping("/{id}/generate-music")

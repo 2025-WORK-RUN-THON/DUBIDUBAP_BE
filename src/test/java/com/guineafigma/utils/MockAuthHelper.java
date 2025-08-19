@@ -18,9 +18,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 
 public class MockAuthHelper {
 
-    /**
-     * JWT 토큰을 모킹하는 RequestPostProcessor
-     */
+    // JWT 토큰을 모킹하는 RequestPostProcessor
     public static RequestPostProcessor mockJwtAuth(Long userId) {
         User mockUser = User.builder()
                 .nickname("testUser")
@@ -45,9 +43,7 @@ public class MockAuthHelper {
         return authentication(auth);
     }
 
-    /**
-     * SecurityContext에 인증 정보 설정
-     */
+    // SecurityContext에 인증 정보 설정
     public static void setUpAuthentication(Long userId) {
         User mockUser = User.builder()
                 .nickname("testUser")
@@ -75,25 +71,19 @@ public class MockAuthHelper {
         SecurityContextHolder.setContext(securityContext);
     }
 
-    /**
-     * SecurityContext 초기화
-     */
+    // SecurityContext 초기화
     public static void clearAuthentication() {
         SecurityContextHolder.clearContext();
     }
 
-    /**
-     * 커스텀 어노테이션 - 테스트에서 사용
-     */
+    // 커스텀 어노테이션 - 테스트에서 사용
     @Retention(RetentionPolicy.RUNTIME)
     public @interface WithMockJwtUser {
         long userId() default 1L;
         String nickname() default "testUser";
     }
 
-    /**
-     * WithMockJwtUser 어노테이션을 위한 SecurityContextFactory
-     */
+    // WithMockJwtUser 어노테이션을 위한 SecurityContextFactory
     public static class WithMockJwtUserSecurityContextFactory 
             implements WithSecurityContextFactory<WithMockJwtUser> {
         

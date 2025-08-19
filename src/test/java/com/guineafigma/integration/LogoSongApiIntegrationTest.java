@@ -15,6 +15,7 @@ import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.ParameterizedTypeReference;
 
 import java.util.Map;
 
@@ -53,7 +54,7 @@ class LogoSongApiIntegrationTest {
     @BeforeEach
     void setUp() {
         baseUrl = "http://localhost:" + port;
-        System.out.println("🚀 로고송 API 통합 테스트 서버 시작: " + baseUrl);
+        System.out.println("로고송 API 통합 테스트 서버 시작: " + baseUrl);
     }
 
     @Test
@@ -67,23 +68,23 @@ class LogoSongApiIntegrationTest {
         HttpEntity<String> request = new HttpEntity<>(loginJson, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/auth/login",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/login",
                 HttpMethod.POST,
                 request,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 통합 테스트 로그인 응답: " + response.getStatusCode());
-        System.out.println("🔍 응답 본문: " + response.getBody());
+        System.out.println("통합 테스트 로그인 응답: " + response.getStatusCode());
+        System.out.println("응답 본문: " + response.getBody());
         
         assertNotNull(response);
         
         if (response.getStatusCode() != HttpStatus.OK) {
-            System.out.println("✅ 존재하지 않는 사용자 로그인 에러 응답 확인됨");
+            System.out.println("존재하지 않는 사용자 로그인 에러 응답 확인됨");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답이지만 API는 동작 중");
+            System.out.println("예상과 다른 응답이지만 API는 동작 중");
         }
     }
 
@@ -91,20 +92,22 @@ class LogoSongApiIntegrationTest {
     @DisplayName("통합 테스트 2: 헬스체크 API 테스트")
     void integrationTest_HealthAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/system/health",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/system/health",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 헬스체크 응답: " + response.getStatusCode());
+        System.out.println("헬스체크 응답: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getStatusCode() == HttpStatus.OK) {
-            System.out.println("✅ 헬스체크 성공!");
+            System.out.println("헬스체크 성공!");
         } else {
-            System.out.println("⚠️ 헬스체크 에러 응답: " + response.getBody());
+            System.out.println("헬스체크 에러 응답: " + response.getBody());
         }
     }
 
@@ -119,23 +122,23 @@ class LogoSongApiIntegrationTest {
         HttpEntity<LogoSongCreateRequest> httpRequest = new HttpEntity<>(request, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/guides",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/guides",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 로고송 가이드라인 생성 응답: " + response.getStatusCode());
-        System.out.println("🔍 응답 본문: " + response.getBody());
+        System.out.println("로고송 가이드라인 생성 응답: " + response.getStatusCode());
+        System.out.println("응답 본문: " + response.getBody());
         
         assertNotNull(response);
         
         if (response.getStatusCode() == HttpStatus.CREATED) {
-            System.out.println("✅ 로고송 가이드라인 생성 성공!");
+            System.out.println("로고송 가이드라인 생성 성공!");
         } else {
-            System.out.println("⚠️ 로고송 생성 에러 응답 확인됨");
+            System.out.println("로고송 생성 에러 응답 확인됨");
         }
     }
 
@@ -143,19 +146,21 @@ class LogoSongApiIntegrationTest {
     @DisplayName("통합 테스트 4: 로고송 목록 조회 API 테스트")
     void integrationTest_LogoSongListAPI() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs?page=0&size=10",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs?page=0&size=10",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 로고송 목록 조회 응답: " + response.getStatusCode());
+        System.out.println("로고송 목록 조회 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         if (response.getStatusCode() == HttpStatus.OK) {
-            System.out.println("✅ 로고송 목록 조회 성공!");
+            System.out.println("로고송 목록 조회 성공!");
         } else {
-            System.out.println("⚠️ 로고송 목록 조회 에러: " + response.getBody());
+            System.out.println("로고송 목록 조회 에러: " + response.getBody());
         }
     }
 
@@ -163,19 +168,21 @@ class LogoSongApiIntegrationTest {
     @DisplayName("통합 테스트 5: 존재하지 않는 엔드포인트 테스트")
     void integrationTest_NotFoundEndpoint() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 baseUrl + "/nonexistent/endpoint",
-                Map.class
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 존재하지 않는 엔드포인트 응답: " + response.getStatusCode());
+        System.out.println("존재하지 않는 엔드포인트 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         if (response.getStatusCode() == HttpStatus.NOT_FOUND) {
-            System.out.println("✅ 404 에러 처리 정상 동작!");
+            System.out.println("404 에러 처리 정상 동작!");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
+            System.out.println("예상과 다른 응답: " + response.getStatusCode());
         }
     }
 
@@ -183,13 +190,15 @@ class LogoSongApiIntegrationTest {
     @DisplayName("통합 테스트 6: JSON 응답 구조 검증")
     void integrationTest_JsonResponseStructure() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/logosongs",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 JSON 응답 구조 검증: " + response.getStatusCode());
+        System.out.println("JSON 응답 구조 검증: " + response.getStatusCode());
         assertNotNull(response);
         
         if (response.getBody() != null) {
@@ -199,7 +208,7 @@ class LogoSongApiIntegrationTest {
                       body.containsKey("data") || 
                       body.containsKey("error") || 
                       body.containsKey("timestamp"));
-            System.out.println("✅ JSON 응답 구조 검증 완료!");
+            System.out.println("JSON 응답 구조 검증 완료!");
         }
     }
 
@@ -207,46 +216,51 @@ class LogoSongApiIntegrationTest {
     @DisplayName("통합 테스트 7: HTTP 메서드 지원 확인")
     void integrationTest_HttpMethodSupport() {
         // GET 테스트
-        ResponseEntity<Map> getResponse = restTemplate.getForEntity(
-                baseUrl + "/logosongs",
-                Map.class
+        ResponseEntity<Map<String, Object>> getResponse = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
-        System.out.println("🔍 GET 메서드 응답: " + getResponse.getStatusCode());
+        System.out.println("GET 메서드 응답: " + getResponse.getStatusCode());
         assertNotNull(getResponse);
         
         // POST 테스트 (빈 요청으로 에러 유발)
-        ResponseEntity<Map> postResponse = restTemplate.postForEntity(
-                baseUrl + "/auth/login",
+        ResponseEntity<Map<String, Object>> postResponse = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/login",
+                HttpMethod.POST,
                 null,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
-        System.out.println("🔍 POST 메서드 응답: " + postResponse.getStatusCode());
+        System.out.println("POST 메서드 응답: " + postResponse.getStatusCode());
         assertNotNull(postResponse);
         
-        System.out.println("✅ 기본 HTTP 메서드 지원 확인 완료!");
+                    System.out.println("기본 HTTP 메서드 지원 확인 완료!");
     }
 
     @Test
     @DisplayName("통합 테스트 8: 전체 시스템 동작 확인")
     void integrationTest_OverallSystemCheck() {
-        System.out.println("🎯 === 전체 시스템 동작 확인 시작 ===");
+        System.out.println("=== 전체 시스템 동작 확인 시작 ===");
         
         // 1. 서버가 시작되었는지 확인
         assertNotNull(restTemplate);
         assertTrue(port > 0);
-        System.out.println("✅ 1. 서버 시작 확인: 포트 " + port);
+                    System.out.println("1. 서버 시작 확인: 포트 " + port);
         
         // 2. HTTP 통신이 가능한지 확인
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/system/health",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/system/health",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
         assertNotNull(response);
-        System.out.println("✅ 2. HTTP 통신 확인: " + response.getStatusCode());
+                    System.out.println("2. HTTP 통신 확인: " + response.getStatusCode());
         
         // 3. JSON 응답이 가능한지 확인
         if (response.getBody() != null) {
-            System.out.println("✅ 3. JSON 응답 확인");
+            System.out.println("3. JSON 응답 확인");
         }
         
         System.out.println("🎉 전체 시스템 동작 확인 완료!");

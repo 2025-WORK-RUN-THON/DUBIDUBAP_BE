@@ -11,6 +11,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.*;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +53,7 @@ class SunoCallbackControllerTest {
     @BeforeEach
     void setUp() {
         baseUrl = "http://localhost:" + port;
-        System.out.println("🚀 Suno Callback 테스트 서버 시작: " + baseUrl);
+        System.out.println("Suno Callback 테스트 서버 시작: " + baseUrl);
     }
 
     @Test
@@ -66,22 +67,22 @@ class SunoCallbackControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(callbackJson, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/suno-callback",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/suno-callback",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 Suno 콜백 성공 응답 상태: " + response.getStatusCode());
+                    System.out.println("Suno 콜백 성공 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ Suno 콜백 처리 API 실제 응답 확인 완료!");
+            System.out.println("Suno 콜백 처리 API 실제 응답 확인 완료!");
         }
     }
 
@@ -96,15 +97,15 @@ class SunoCallbackControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(invalidCallbackJson, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/suno-callback",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/suno-callback",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 Suno 콜백 taskId 없음 응답 상태: " + response.getStatusCode());
+                    System.out.println("Suno 콜백 taskId 없음 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
@@ -112,7 +113,7 @@ class SunoCallbackControllerTest {
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("error") || body.containsKey("timestamp"));
-            System.out.println("✅ Suno 콜백 taskId 없음 에러 응답 확인 완료!");
+            System.out.println("Suno 콜백 taskId 없음 에러 응답 확인 완료!");
         }
     }
 
@@ -127,22 +128,22 @@ class SunoCallbackControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(specialCharJson, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/suno-callback",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/suno-callback",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 Suno 콜백 특수문자 taskId 응답 상태: " + response.getStatusCode());
+                    System.out.println("Suno 콜백 특수문자 taskId 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ Suno 콜백 특수문자 taskId 처리 확인 완료!");
+            System.out.println("Suno 콜백 특수문자 taskId 처리 확인 완료!");
         }
     }
 
@@ -160,20 +161,20 @@ class SunoCallbackControllerTest {
             HttpEntity<String> httpRequest = new HttpEntity<>(statusJson, headers);
 
             // When
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    baseUrl + "/logosongs/suno-callback",
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    baseUrl + "/api/v1/logosongs/suno-callback",
                     HttpMethod.POST,
                     httpRequest,
-                    Map.class
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
             );
 
             // Then
-            System.out.println("🔍 Suno 콜백 상태 " + status + " 응답: " + response.getStatusCode());
+            System.out.println("Suno 콜백 상태 " + status + " 응답: " + response.getStatusCode());
             assertNotNull(response);
             assertNotNull(response.getStatusCode());
         }
         
-        System.out.println("✅ Suno 콜백 다양한 상태값 처리 확인 완료!");
+                    System.out.println("Suno 콜백 다양한 상태값 처리 확인 완료!");
     }
 
     @Test
@@ -187,21 +188,21 @@ class SunoCallbackControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(invalidJson, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/suno-callback",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/suno-callback",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 Suno 콜백 잘못된 JSON 응답 상태: " + response.getStatusCode());
+                    System.out.println("Suno 콜백 잘못된 JSON 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         // 에러 응답이면 정상
         assertTrue(response.getStatusCode().is4xxClientError() || response.getStatusCode().is5xxServerError());
-        System.out.println("✅ Suno 콜백 잘못된 JSON 에러 처리 확인 완료!");
+                    System.out.println("Suno 콜백 잘못된 JSON 에러 처리 확인 완료!");
     }
 
     @Test
@@ -215,22 +216,22 @@ class SunoCallbackControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(emptyJson, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/suno-callback",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/suno-callback",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 Suno 콜백 빈 JSON 응답 상태: " + response.getStatusCode());
+                    System.out.println("Suno 콜백 빈 JSON 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("error") || body.containsKey("timestamp"));
-            System.out.println("✅ Suno 콜백 빈 JSON 처리 확인 완료!");
+            System.out.println("Suno 콜백 빈 JSON 처리 확인 완료!");
         }
     }
 
@@ -244,15 +245,15 @@ class SunoCallbackControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(callbackJson);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/suno-callback",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/suno-callback",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 Suno 콜백 Content-Type 없음 응답 상태: " + response.getStatusCode());
+                    System.out.println("Suno 콜백 Content-Type 없음 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
@@ -260,7 +261,7 @@ class SunoCallbackControllerTest {
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ Suno 콜백 Content-Type 없음 처리 확인 완료!");
+            System.out.println("Suno 콜백 Content-Type 없음 처리 확인 완료!");
         }
     }
 
@@ -275,22 +276,22 @@ class SunoCallbackControllerTest {
         HttpEntity<String> httpRequest = new HttpEntity<>(jsonWithExtraFields, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/logosongs/suno-callback",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/suno-callback",
                 HttpMethod.POST,
                 httpRequest,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 Suno 콜백 추가 필드 포함 응답 상태: " + response.getStatusCode());
+                    System.out.println("Suno 콜백 추가 필드 포함 응답 상태: " + response.getStatusCode());
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
         
         if (response.getBody() != null) {
             Map<String, Object> body = response.getBody();
             assertTrue(body.containsKey("message") || body.containsKey("data") || body.containsKey("error"));
-            System.out.println("✅ Suno 콜백 추가 필드 포함 처리 확인 완료!");
+            System.out.println("Suno 콜백 추가 필드 포함 처리 확인 완료!");
         }
     }
 }

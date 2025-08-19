@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 
 import java.util.Map;
 
@@ -49,14 +51,16 @@ class SystemControllerTest {
     @DisplayName("헬스체크 - 실제 API 호출 테스트")
     void health_ActualApiCall() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/system/health",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/system/health",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
         
         // Then
-        System.out.println("🔍 응답 상태 코드: " + response.getStatusCode());
-        System.out.println("🔍 응답 본문: " + response.getBody());
+        System.out.println("응답 상태 코드: " + response.getStatusCode());
+        System.out.println("응답 본문: " + response.getBody());
         
         // 실제 API 호출이 성공했는지 확인 (상태 코드 관계없이)
         assertNotNull(response);
@@ -65,44 +69,44 @@ class SystemControllerTest {
         
         Map<String, Object> body = response.getBody();
         
-        if (response.getStatusCode() == HttpStatus.OK) {
-            // 성공적인 응답인 경우
-            assertEquals(true, body.get("success"));
-            assertEquals("서비스가 정상적으로 동작 중입니다.", body.get("message"));
-            
-            Map<String, Object> data = (Map<String, Object>) body.get("data");
-            assertEquals("UP", data.get("status"));
-            assertNotNull(data.get("db"));
-            assertNotNull(data.get("timestamp"));
-            assertEquals("dubidubap server", data.get("service"));
-            
-            System.out.println("✅ 헬스체크 API 성공 응답 검증 완료");
-        } else {
-            // 에러 응답인 경우
+        if (response.getStatusCode() == HttpStatus.OK && body != null) {
+            // 성공적인 응답인 경우 (ApiResponse 스키마)
+            assertTrue(body.containsKey("timestamp"));
+            assertEquals(200, body.get("status"));
+            assertEquals("SUCCESS", body.get("code"));
+            assertTrue(body.containsKey("message"));
+            assertEquals("/api/v1/system/health", body.get("path"));
+            System.out.println("헬스체크 API 성공 응답 검증 완료");
+        } else if (body != null) {
+            // 에러 응답인 경우 (ApiResponse 에러 스키마)
             assertTrue(body.containsKey("timestamp"));
             assertTrue(body.containsKey("status"));
             assertTrue(body.containsKey("message"));
             assertTrue(body.containsKey("path"));
-            assertEquals("/system/health", body.get("path"));
+            assertEquals("/api/v1/system/health", body.get("path"));
             
-            System.out.println("⚠️ 헬스체크 API 에러 응답 검증 완료: " + body.get("message"));
+            System.out.println("헬스체크 API 에러 응답 검증 완료: " + body.get("message"));
+        } else {
+            fail("응답 바디가 null 입니다");
         }
         
-        System.out.println("✅ 실제 API 호출 테스트 완료 - 응답 수신 확인됨");
+                    System.out.println("실제 API 호출 테스트 완료 - 응답 수신 확인됨");
     }
 
     @Test
     @DisplayName("헬스체크 - 응답 구조 검증")
     void health_ResponseStructure() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/system/health",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/system/health",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
         
         // Then
-        System.out.println("🔍 응답 구조 검증 - 상태 코드: " + response.getStatusCode());
-        System.out.println("🔍 응답 구조 검증 - 응답 본문: " + response.getBody());
+        System.out.println("응답 구조 검증 - 상태 코드: " + response.getStatusCode());
+        System.out.println("응답 구조 검증 - 응답 본문: " + response.getBody());
         
         assertNotNull(response);
         assertNotNull(response.getStatusCode());
@@ -111,19 +115,21 @@ class SystemControllerTest {
         Map<String, Object> body = response.getBody();
         
         // 실제 API 응답에 따른 유연한 검증
-        if (response.getStatusCode() == HttpStatus.OK) {
-            // 성공 응답 구조 확인
-            assertTrue(body.containsKey("success") || body.containsKey("data") || body.containsKey("message"));
-            System.out.println("✅ 헬스체크 성공 응답 구조 검증 완료");
-        } else {
+        if (response.getStatusCode() == HttpStatus.OK && body != null) {
+            // 성공 응답 구조 확인 (ApiResponse 필드 일부 확인)
+            assertTrue(body.containsKey("timestamp") && body.containsKey("status") && body.containsKey("code"));
+            System.out.println("헬스체크 성공 응답 구조 검증 완료");
+        } else if (body != null) {
             // 에러 응답 구조 확인  
             assertTrue(body.containsKey("timestamp") || 
                       body.containsKey("status") || 
                       body.containsKey("message") || 
-                      body.containsKey("error"));
-            System.out.println("✅ 헬스체크 에러 응답 구조 검증 완료");
+                      body.containsKey("code"));
+            System.out.println("헬스체크 에러 응답 구조 검증 완료");
+        } else {
+            fail("응답 바디가 null 입니다");
         }
         
-        System.out.println("✅ 응답 구조 검증 테스트 완료!");
+        System.out.println("응답 구조 검증 테스트 완료!");
     }
 }

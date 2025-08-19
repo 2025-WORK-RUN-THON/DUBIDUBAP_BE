@@ -4,7 +4,7 @@ import com.guineafigma.domain.user.dto.request.LoginRequest;
 import com.guineafigma.domain.user.dto.response.LoginResponse;
 import com.guineafigma.domain.user.entity.User;
 import com.guineafigma.domain.user.repository.UserRepository;
-import com.guineafigma.utils.TestDataBuilder;
+// import com.guineafigma.utils.TestDataBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,11 +13,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -81,29 +83,29 @@ class AuthControllerTest {
 
         // When
         ResponseEntity<LoginResponse> response = restTemplate.exchange(
-                baseUrl + "/auth/login",
+                baseUrl + "/api/v1/auth/login",
                 HttpMethod.POST,
                 request,
                 LoginResponse.class
         );
 
         // Then
-        System.out.println("🔍 로그인 응답 상태: " + response.getStatusCode());
-        System.out.println("🔍 로그인 응답 본문: " + response.getBody());
+                    System.out.println("로그인 응답 상태: " + response.getStatusCode());
+            System.out.println("로그인 응답 본문: " + response.getBody());
 
         assertNotNull(response);
         assertNotNull(response.getBody());
 
-        if (response.getStatusCode() == HttpStatus.OK) {
-            LoginResponse loginResponse = response.getBody();
+        if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+            LoginResponse loginResponse = Objects.requireNonNull(response.getBody());
             assertNotNull(loginResponse.getUserId());
             assertEquals("testUser", loginResponse.getNickname());
             assertNotNull(loginResponse.getAccessToken());
             assertEquals("Bearer", loginResponse.getTokenType());
             assertNotNull(loginResponse.getExpiresIn());
-            System.out.println("✅ 로그인 성공 테스트 완료");
+            System.out.println("로그인 성공 테스트 완료");
         } else {
-            System.out.println("⚠️ 로그인 실패 - 에러 응답 확인됨");
+            System.out.println("로그인 실패 - 에러 응답 확인됨");
         }
     }
 
@@ -120,23 +122,26 @@ class AuthControllerTest {
         HttpEntity<LoginRequest> request = new HttpEntity<>(loginRequest, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/auth/login",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/login",
                 HttpMethod.POST,
                 request,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 잘못된 비밀번호 응답: " + response.getStatusCode());
+                    System.out.println("잘못된 비밀번호 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         // 에러 응답 구조 확인
         if (response.getStatusCode() != HttpStatus.OK) {
-            assertNotNull(response.getBody());
-            Map<String, Object> body = response.getBody();
-            assertTrue(body.containsKey("message") || body.containsKey("error"));
-            System.out.println("✅ 잘못된 비밀번호 에러 응답 검증 완료");
+            if (response.getBody() != null) {
+                Map<String, Object> body = Objects.requireNonNull(response.getBody());
+                assertTrue(body.containsKey("message") || body.containsKey("error"));
+                System.out.println("잘못된 비밀번호 에러 응답 검증 완료");
+            } else {
+                fail("응답 바디가 null 입니다");
+            }
         }
     }
 
@@ -153,20 +158,20 @@ class AuthControllerTest {
         HttpEntity<LoginRequest> request = new HttpEntity<>(loginRequest, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/auth/login",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/login",
                 HttpMethod.POST,
                 request,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 존재하지 않는 사용자 응답: " + response.getStatusCode());
+                    System.out.println("존재하지 않는 사용자 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         if (response.getStatusCode() != HttpStatus.OK) {
             assertNotNull(response.getBody());
-            System.out.println("✅ 존재하지 않는 사용자 에러 응답 검증 완료");
+            System.out.println("존재하지 않는 사용자 에러 응답 검증 완료");
         }
     }
 
@@ -183,21 +188,21 @@ class AuthControllerTest {
         HttpEntity<LoginRequest> request = new HttpEntity<>(loginRequest, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/auth/login",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/login",
                 HttpMethod.POST,
                 request,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 검증 실패 응답: " + response.getStatusCode());
+                    System.out.println("검증 실패 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         // 검증 실패 응답 확인
         if (response.getStatusCode() == HttpStatus.BAD_REQUEST) {
             assertNotNull(response.getBody());
-            System.out.println("✅ 검증 실패 에러 응답 검증 완료");
+            System.out.println("검증 실패 에러 응답 검증 완료");
         }
     }
 
@@ -205,19 +210,20 @@ class AuthControllerTest {
     @DisplayName("로그아웃 - 인증 토큰 없이 시도")
     void logout_NoAuth() {
         // When
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                baseUrl + "/auth/logout",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/logout",
+                HttpMethod.POST,
                 null,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 로그아웃 (인증 없음) 응답: " + response.getStatusCode());
+                    System.out.println("로그아웃 (인증 없음) 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         // 인증 오류 응답 확인
         if (response.getStatusCode() == HttpStatus.UNAUTHORIZED || response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            System.out.println("✅ 인증 없는 로그아웃 에러 응답 검증 완료");
+            System.out.println("인증 없는 로그아웃 에러 응답 검증 완료");
         } else {
             System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
         }
@@ -227,20 +233,22 @@ class AuthControllerTest {
     @DisplayName("내 정보 조회 - 인증 없음")
     void getMyInfo_NoAuth() {
         // When
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                baseUrl + "/auth/me",
-                Map.class
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/me",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 내 정보 조회 (인증 없음) 응답: " + response.getStatusCode());
+        System.out.println("내 정보 조회 (인증 없음) 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         // 인증 오류 응답 확인
         if (response.getStatusCode() == HttpStatus.UNAUTHORIZED || response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            System.out.println("✅ 인증 없는 내 정보 조회 에러 응답 검증 완료");
+            System.out.println("인증 없는 내 정보 조회 에러 응답 검증 완료");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
+            System.out.println("예상과 다른 응답: " + response.getStatusCode());
         }
     }
 
@@ -255,22 +263,22 @@ class AuthControllerTest {
         HttpEntity<String> request = new HttpEntity<>(jsonData, headers);
 
         // When
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/auth/login",
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/auth/login",
                 HttpMethod.POST,
                 request,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         // Then
-        System.out.println("🔍 잘못된 Content-Type 응답: " + response.getStatusCode());
+        System.out.println("잘못된 Content-Type 응답: " + response.getStatusCode());
         assertNotNull(response);
         
         if (response.getStatusCode() == HttpStatus.UNSUPPORTED_MEDIA_TYPE || 
             response.getStatusCode() == HttpStatus.BAD_REQUEST) {
-            System.out.println("✅ 잘못된 Content-Type 에러 응답 검증 완료");
+            System.out.println("잘못된 Content-Type 에러 응답 검증 완료");
         } else {
-            System.out.println("⚠️ 예상과 다른 응답: " + response.getStatusCode());
+            System.out.println("예상과 다른 응답: " + response.getStatusCode());
         }
     }
 }
