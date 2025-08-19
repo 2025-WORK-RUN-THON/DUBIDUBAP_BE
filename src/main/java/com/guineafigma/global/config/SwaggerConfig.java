@@ -9,9 +9,12 @@ import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.parameters.Parameter;
 import lombok.Builder;
 import lombok.Getter;
 import org.springdoc.core.customizers.OperationCustomizer;
@@ -63,6 +66,7 @@ public class SwaggerConfig {
         return GroupedOpenApi.builder()
                 .group("all")
                 .pathsToMatch("/api/v1/**")
+                .addOperationCustomizer(operationCustomizer())
                 .build();
     }
 
@@ -71,6 +75,7 @@ public class SwaggerConfig {
         return GroupedOpenApi.builder()
                 .group("auth")
                 .pathsToMatch("/api/v1/auth/**")
+                .addOperationCustomizer(operationCustomizer())
                 .build();
     }
 
@@ -79,6 +84,7 @@ public class SwaggerConfig {
         return GroupedOpenApi.builder()
                 .group("logosongs")
                 .pathsToMatch("/api/v1/logosongs/**")
+                .addOperationCustomizer(operationCustomizer())
                 .build();
     }
 
@@ -87,6 +93,7 @@ public class SwaggerConfig {
         return GroupedOpenApi.builder()
                 .group("system")
                 .pathsToMatch("/api/v1/system/**")
+                .addOperationCustomizer(operationCustomizer())
                 .build();
     }
 
@@ -113,6 +120,9 @@ public class SwaggerConfig {
             if (apiSuccessResponse != null) {
                 generateSuccessResponseExample(operation, apiSuccessResponse, actualPath);
             }
+
+            // 페이지네이션 파라미터 한국어 문서 보강
+            enhancePaginationParameters(operation);
 
             return operation;
         };
@@ -203,6 +213,9 @@ public class SwaggerConfig {
                 mediaType = new MediaType();
                 content.addMediaType("application/json", mediaType);
             }
+            if (mediaType.getSchema() == null) {
+                mediaType.setSchema(new ObjectSchema());
+            }
 
             // Examples 맵 설정
             Map<String, Example> examples = mediaType.getExamples();
@@ -219,6 +232,40 @@ public class SwaggerConfig {
             // ApiResponse를 responses에 추가
             responses.addApiResponse(statusKey, apiResponse);
         });
+    }
+
+    // 페이지네이션 파라미터 설명/예제 보강 (page, size, sort)
+    private void enhancePaginationParameters(Operation operation) {
+        if (operation.getParameters() == null || operation.getParameters().isEmpty()) {
+            return;
+        }
+
+        for (Parameter p : operation.getParameters()) {
+            if (p == null || p.getName() == null) continue;
+            String name = p.getName();
+            if ("page".equals(name)) {
+                p.setRequired(false);
+                p.setDescription("0부터 시작하는 페이지 번호 (예: 0)");
+                p.setExample(0);
+                Schema<?> schema = p.getSchema() != null ? p.getSchema() : new Schema<>().type("integer");
+                schema.setMinimum(java.math.BigDecimal.ZERO);
+                p.setSchema(schema);
+            } else if ("size".equals(name)) {
+                p.setRequired(false);
+                p.setDescription("페이지 당 항목 수 (1~100, 기본값 10)");
+                p.setExample(10);
+                Schema<?> schema = p.getSchema() != null ? p.getSchema() : new Schema<>().type("integer");
+                schema.setMinimum(java.math.BigDecimal.ONE);
+                schema.setMaximum(new java.math.BigDecimal(100));
+                p.setSchema(schema);
+            } else if ("sort".equals(name)) {
+                p.setRequired(false);
+                p.setDescription("정렬 기준, 쉼표로 방향 지정 (예: createdAt,desc | likeCount,asc)");
+                p.setExample("createdAt,desc");
+                Schema<?> schema = p.getSchema() != null ? p.getSchema() : new Schema<>().type("string");
+                p.setSchema(schema);
+            }
+        }
     }
 
     // 성공 응답 예제 생성 (200)
@@ -238,6 +285,9 @@ public class SwaggerConfig {
         if (mediaType == null) {
             mediaType = new MediaType();
             content.addMediaType("application/json", mediaType);
+        }
+        if (mediaType.getSchema() == null) {
+            mediaType.setSchema(new ObjectSchema());
         }
 
         Map<String, Example> examples = mediaType.getExamples();

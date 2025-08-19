@@ -17,10 +17,10 @@ import java.util.List;
 @Schema(description = "페이지네이션 응답 데이터")
 public class PagedResponse<T> {
     
-    @ArraySchema(schema = @Schema(description = "조회된 데이터 목록"))
+    @ArraySchema(schema = @Schema(description = "조회된 데이터 목록", nullable = false), arraySchema = @Schema(required = true))
     private List<T> content;
     
-    @Schema(description = "페이지네이션 정보")
+    @Schema(description = "페이지네이션 정보", required = true, nullable = false)
     private BasePaginationDto pagination;
     
     public static <T> PagedResponse<T> of(List<T> content, BasePaginationDto pagination) {

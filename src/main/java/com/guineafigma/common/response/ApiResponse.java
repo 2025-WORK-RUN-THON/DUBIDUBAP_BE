@@ -18,22 +18,22 @@ import java.time.LocalDateTime;
 @Schema(description = "API 응답")
 public class ApiResponse<T> {
 
-    @Schema(description = "응답 시간", example = "2025-06-30T12:00:00.000000")
+    @Schema(description = "응답 시간", example = "2025-06-30T12:00:00.000000", required = true, nullable = false)
     private LocalDateTime timestamp;
     
-    @Schema(description = "HTTP 상태 코드", example = "200")
+    @Schema(description = "HTTP 상태 코드", example = "200", required = true, nullable = false)
     private int status;
     
-    @Schema(description = "응답 코드", example = "SUCCESS")
+    @Schema(description = "응답 코드", example = "SUCCESS", required = true, nullable = false)
     private String code;
     
-    @Schema(description = "응답 메시지", example = "요청이 성공적으로 처리되었습니다.")
+    @Schema(description = "응답 메시지", example = "요청이 성공적으로 처리되었습니다.", required = true, nullable = false)
     private String message;
     
-    @Schema(description = "요청 경로", example = "/api/v1/example")
+    @Schema(description = "요청 경로", example = "/api/v1/example", required = false, nullable = true)
     private String path;
     
-    @Schema(description = "응답 데이터")
+    @Schema(description = "응답 데이터", required = false, nullable = true)
     private T data;
 
     public static <T> ApiResponse<T> success() {

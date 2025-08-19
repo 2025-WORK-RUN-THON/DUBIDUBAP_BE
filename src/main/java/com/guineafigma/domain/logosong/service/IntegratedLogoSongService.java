@@ -57,7 +57,7 @@ public class IntegratedLogoSongService {
         }
     }
 
-    // 로고송 생성 - 가사/비디오 가이드라인만 생성하여 저장하고 전체 레코드를 반환
+    // 로고송 생성 - 가사만 생성하여 저장하고 전체 레코드를 반환 (비디오 가이드라인 생성 안 함)
     // 음악 생성은 시작하지 않음
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public LogoSongResponse createLogoSongWithGuidesOnly(LogoSongCreateRequest request) {
@@ -67,12 +67,12 @@ public class IntegratedLogoSongService {
             // 1. 기본 LogoSong 생성 (짧은 트랜잭션)
             LogoSongResponse created = logoSongService.createLogoSong(request);
 
-            // 2. 가사/비디오 가이드라인 생성 (트랜잭션 없음)
-            GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
+            // 2. 가사만 생성 (트랜잭션 없음)
+            String lyrics = logoSongLyricsService.generateLyricsOnly(request);
 
-            // 3. DB 업데이트 (짧은 트랜잭션) 후 전체 레코드 반환
-            return logoSongService.updateLyricsAndVideoGuide(
-                    created.getId(), guides.getLyrics(), guides.getVideoGuideline());
+            // 3. DB 업데이트 (가사만 저장) 후 전체 레코드 반환, 음악 상태는 PENDING으로 설정
+            return logoSongService.updateLyricsOnlyAndSetPending(
+                    created.getId(), lyrics);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
@@ -125,10 +125,11 @@ public class IntegratedLogoSongService {
 
     // 비디오 가이드라인만 (재)생성 - logosong id 기준
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public LogoSongResponse regenerateVideoGuideOnly(Long logoSongId, LogoSongCreateRequest request) {
-        GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
-        LogoSongResponse updated = logoSongService.updateVideoGuidelineOnly(
-                logoSongId, guides.getVideoGuideline());
+    public LogoSongResponse regenerateVideoGuideOnly(Long logoSongId) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        String videoGuide = logoSongLyricsService.generateVideoGuideOnly(logoSong);
+        LogoSongResponse updated = logoSongService.updateVideoGuidelineOnly(logoSongId, videoGuide);
         log.info("비디오 가이드라인 (재)생성 완료: logoSongId={}", logoSongId);
         return updated;
     }

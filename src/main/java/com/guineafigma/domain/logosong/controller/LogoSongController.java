@@ -127,11 +127,11 @@ public class LogoSongController {
     @PostMapping("/guides")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
-        summary = "가사/비디오 가이드라인 생성", 
-        description = "브랜드 정보를 기반으로 LogoSong 엔티티를 생성한 뒤 OpenAI API로 가사/비디오 가이드라인을 생성하여 저장하고, 업데이트된 전체 레코드를 반환합니다."
+        summary = "가사 생성", 
+        description = "브랜드 정보를 기반으로 LogoSong 엔티티를 생성한 뒤 OpenAI API로 '가사만' 생성하여 저장하고, 업데이트된 전체 레코드를 반환합니다. 비디오 가이드라인은 생성하지 않습니다."
     )
     @ApiSuccessResponse(
-        message = "가사/비디오 가이드라인 생성이 성공적으로 처리되었습니다.", 
+        message = "가사 생성이 성공적으로 처리되었습니다.", 
         dataType = LogoSongResponse.class,
         httpStatus = 201
     )
@@ -309,26 +309,16 @@ public class LogoSongController {
     }
 
     @PostMapping("/{id}/regenerate-video-guide")
-    @Operation(summary = "비디오 가이드라인 (재)생성", 
-               description = "기존 로고송 ID 기반으로 비디오 가이드라인만 생성/재생성합니다.\n\n" +
-                       "처리 과정:\n" +
-                       "- OpenAI API를 호출하여 새로운 비디오 가이드라인 생성\n" +
-                       "- 기존 비디오 가이드라인을 새로운 것으로 교체\n" +
-                       "- 가사는 유지됨\n" +
-                       "- 음악 상태는 변경하지 않음\n\n" +
-                       "사용 시나리오:\n" +
-                       "- 기존 가사로 다른 영상 컨셉 시도\n" +
-                       "- 비디오 가이드라인 품질 개선\n" +
-                       "- 마케팅 방향성 변경")
+    @Operation(summary = "비디오 가이드라인 (재)생성",
+               description = "기존 로고송 ID 기반으로 비디오 가이드라인만 생성/재생성합니다. 사용자 입력은 이미 DB에 저장되어 있으므로 추가 요청 본문이 필요하지 않습니다.")
     @ApiSuccessResponse(message = "비디오 가이드라인 (재)생성이 성공적으로 처리되었습니다.", dataType = LogoSongResponse.class)
     @ApiErrorExamples({
             ErrorCode.LOGOSONG_NOT_FOUND,
             ErrorCode.LYRICS_GENERATION_FAILED
     })
     public ApiResponse<LogoSongResponse> regenerateVideoGuide(
-            @Parameter(description = "로고송 ID") @PathVariable Long id,
-            @Valid @RequestBody LogoSongCreateRequest request) {
-        LogoSongResponse updated = integratedLogoSongService.regenerateVideoGuideOnly(id, request);
+            @Parameter(description = "로고송 ID") @PathVariable Long id) {
+        LogoSongResponse updated = integratedLogoSongService.regenerateVideoGuideOnly(id);
         return ApiResponse.success(updated);
     }
 
