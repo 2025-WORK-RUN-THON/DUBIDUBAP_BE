@@ -34,7 +34,7 @@ public class LogoSongLyricsService {
     @Value("${openai.api.url:https://api.openai.com/v1/chat/completions}")
     private String openaiApiUrl;
 
-    @Value("${openai.api.model:gpt-4o-mini}")
+    @Value("${openai.api.model}")
     private String openaiModel;
 
     public GuidesResponse generateLyricsAndVideoGuide(LogoSongCreateRequest request) {
@@ -96,14 +96,20 @@ public class LogoSongLyricsService {
     }
 
     private String callOpenAI(String masterPrompt, String model) {
+        // Responses API 형식으로 변경
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
-        body.put("temperature", 0.8); // 창의성을 위해 조금 더 높게 설정
-        body.put("max_tokens", 2000);
-        body.put("messages", List.of(
-                Map.of("role", "system", "content", buildSystemPrompt()),
-                Map.of("role", "user", "content", masterPrompt)
-        ));
+        body.put("instructions", buildSystemPrompt());
+        body.put("input", masterPrompt);
+        
+        // GPT-5 전용 파라미터 추가
+        Map<String, Object> reasoning = new HashMap<>();
+        reasoning.put("effort", "minimal"); // 빠른 응답을 위해
+        body.put("reasoning", reasoning);
+        
+        Map<String, Object> text = new HashMap<>();
+        text.put("verbosity", "medium"); // 적절한 길이의 응답
+        body.put("text", text);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -116,10 +122,61 @@ public class LogoSongLyricsService {
         }
         
         try {
-            log.debug("OpenAI 원본 응답: {}", response);
+            log.info("OpenAI 원본 응답: {}", response);
             JsonNode root = objectMapper.readTree(response);
-            String content = root.path("choices").path(0).path("message").path("content").asText("");
-            log.debug("OpenAI 추출된 컨텐츠: {}", content);
+            log.info("OpenAI 응답 JSON 구조: {}", root.toPrettyString());
+            
+            String content = "";
+            
+            // 1. output_text 필드 시도
+            if (root.has("output_text")) {
+                content = root.path("output_text").asText("");
+                log.info("output_text에서 추출: {}", content);
+            }
+            
+            // 2. output 배열에서 추출 시도 (실제 Responses API 구조)
+            if (content.isEmpty() && root.has("output")) {
+                JsonNode outputArray = root.path("output");
+                log.info("output 배열: {}", outputArray);
+                if (outputArray.isArray() && outputArray.size() > 0) {
+                    // output 배열에서 type이 "message"인 항목 찾기
+                    for (JsonNode outputItem : outputArray) {
+                        if ("message".equals(outputItem.path("type").asText(""))) {
+                            log.info("message type output 찾음: {}", outputItem);
+                            
+                            JsonNode contentArray = outputItem.path("content");
+                            if (contentArray.isArray() && contentArray.size() > 0) {
+                                // content 배열에서 첫 번째 항목의 text 필드 추출
+                                content = contentArray.get(0).path("text").asText("");
+                                log.info("message content에서 추출: {}", content);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 3. 다른 가능한 필드들 시도
+            if (content.isEmpty()) {
+                String[] possibleFields = {"text", "message", "result", "response"};
+                for (String field : possibleFields) {
+                    if (root.has(field)) {
+                        content = root.path(field).asText("");
+                        if (!content.isEmpty()) {
+                            log.info("{}에서 추출: {}", field, content);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            log.info("최종 추출된 컨텐츠: {}", content);
+            
+            if (content.isEmpty()) {
+                log.error("모든 파싱 시도 실패 - 응답에서 텍스트를 추출할 수 없음");
+                throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);
+            }
+            
             return content;
         } catch (Exception e) {
             log.error("OpenAI 응답 파싱 실패 - 원본 응답: '{}', 에러: {}", response, e.getMessage(), e);

@@ -42,8 +42,8 @@ suno:
 openai:
   api:
     key: ${OPENAI_API_KEY:your-openai-api-key}
-    url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
-    model: ${OPENAI_MODEL:gpt-4o-mini}
+    url: ${OPENAI_API_URL:https://api.openai.com/v1/responses}
+    model: ${OPENAI_MODEL:gpt-5-mini}
 
 # JWT 설정
 jwt:
