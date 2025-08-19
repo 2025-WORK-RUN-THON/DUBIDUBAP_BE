@@ -82,3 +82,9 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// 배포 아티팩트 일원화: plain.jar 비활성화, bootJar 파일명 고정
+tasks.jar { enabled = false }
+bootJar {
+    archiveFileName = "guineafigma-server.jar"
+}

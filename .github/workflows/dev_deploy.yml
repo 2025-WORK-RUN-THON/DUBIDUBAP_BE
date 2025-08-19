@@ -32,19 +32,20 @@ jobs:
       - name: Grant permission to gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew build -x test --build-cache --parallel
+      - name: Build with Gradle (bootJar only)
+        run: ./gradlew clean bootJar --build-cache --parallel
 
       - name: Verify prod config packaged
         run: |
-          JAR=$(ls -1 build/libs/*-SNAPSHOT.jar | grep -v plain | head -n 1)
+          JAR=build/libs/guineafigma-server.jar
+          test -f "$JAR" || { echo "Jar not found: $JAR"; ls -lah build/libs; exit 1; }
           echo "Checking JAR: $JAR"
           jar tf "$JAR" | grep -q 'BOOT-INF/classes/application-prod.yml'
 
       - name: Compress JAR with tar.gz # jar 파일 압축
         run: |
           mkdir -p package
-          JAR=$(ls -1 build/libs/*-SNAPSHOT.jar | grep -v plain | head -n 1)
+          JAR=build/libs/guineafigma-server.jar
           echo "Packaging JAR: $JAR"
           cp "$JAR" package/guineafigma-server.jar
           tar --use-compress-program="gzip -1" -cf guineafigma-app.tar.gz -C package guineafigma-server.jar
@@ -132,7 +133,8 @@ jobs:
             "" \
             "[Service]" \
             "User='$U'" \
-            "WorkingDirectory=/home/'$U'" \
+            "WorkingDirectory=/home/'$U'/guineafigma-app" \
+            "Environment=SPRING_PROFILES_ACTIVE=prod" \
             "EnvironmentFile=/home/'$U'/.env" \
             "ExecStart=/usr/bin/java -jar '$abs_jar'" \
             "SuccessExitStatus=143" \
@@ -148,9 +150,9 @@ jobs:
           sudo systemctl enable guineafigma || true
           sudo systemctl restart guineafigma
 
-          # 헬스 체크(최대 5회 재시도)
-          for i in 1 2 3 4 5; do
-            sleep 3
+          # 헬스 체크(최대 8회 재시도)
+          for i in 1 2 3 4 5 6 7 8; do
+            sleep 2
             if curl -fsS http://localhost:8080/api/v1/system/health >/dev/null; then
               echo "Health OK"; exit 0
             fi

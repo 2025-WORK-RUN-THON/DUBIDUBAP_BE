@@ -30,12 +30,13 @@ jobs:
           EOF
         shell: bash
 
-      - name: Build Jar
+      - name: Build Jar (bootJar only)
         run: ./gradlew clean bootJar --no-daemon
 
       - name: Verify prod config packaged
         run: |
-          JAR=$(ls -1 build/libs/*-SNAPSHOT.jar | grep -v plain | head -n 1)
+          JAR=build/libs/guineafigma-server.jar
+          test -f "$JAR" || { echo "Jar not found: $JAR"; ls -lah build/libs; exit 1; }
           echo "Checking JAR: $JAR"
           jar tf "$JAR" | grep -q 'BOOT-INF/classes/application-prod.yml'
 
