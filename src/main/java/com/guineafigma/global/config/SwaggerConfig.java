@@ -15,6 +15,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import lombok.Builder;
 import lombok.Getter;
 import org.springdoc.core.customizers.OperationCustomizer;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.HandlerMethod;
@@ -50,17 +51,43 @@ public class SwaggerConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("하비뒤밥 (Dubidubap) API")
-                        .description("하비뒤밥 - AI 기반 로고송 제작 플랫폼\n\n" +
-                                "🎵 **주요 기능**:\n" +
-                                "- 브랜드 정보 기반 로고송 가사 생성 (OpenAI)\n" +
-                                "- AI 음악 생성 및 업로드 (Suno AI)\n" +
-                                "- 사용자 커미니티 및 상호작용 기능\n" +
-                                "- S3 미디어 관리 및 다운로드\n\n" +
-                                "🔒 **인증**: JWT Bearer Token 기반\n" +
-                                "🌐 **서버**: Spring Boot 3.x + MySQL/H2")
+                        .title("두비두밥 (Dubidubap) API")
+                        .description("AI 기반 로고송 제작 플랫폼 API\n\n" +
+                                "그룹:\n- all: 전체 API\n- auth: 인증\n- logosongs: 로고송\n- system: 시스템 상태\n")
                         .version("v1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList("JWT"));
+    }
+
+    @Bean
+    public GroupedOpenApi defaultGroup() {
+        return GroupedOpenApi.builder()
+                .group("all")
+                .pathsToMatch("/api/v1/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi authGroup() {
+        return GroupedOpenApi.builder()
+                .group("auth")
+                .pathsToMatch("/api/v1/auth/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi logoSongsGroup() {
+        return GroupedOpenApi.builder()
+                .group("logosongs")
+                .pathsToMatch("/api/v1/logosongs/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi systemGroup() {
+        return GroupedOpenApi.builder()
+                .group("system")
+                .pathsToMatch("/api/v1/system/**")
+                .build();
     }
 
     @Bean
@@ -79,6 +106,12 @@ public class SwaggerConfig {
             ApiErrorExamples apiErrorExamples = handlerMethod.getMethodAnnotation(ApiErrorExamples.class);
             if (apiErrorExamples != null) {
                 generateErrorCodeResponseExample(operation, apiErrorExamples.value(), actualPath);
+            }
+
+            // 성공 응답 예제 처리
+            ApiSuccessResponse apiSuccessResponse = handlerMethod.getMethodAnnotation(ApiSuccessResponse.class);
+            if (apiSuccessResponse != null) {
+                generateSuccessResponseExample(operation, apiSuccessResponse, actualPath);
             }
 
             return operation;
@@ -186,6 +219,55 @@ public class SwaggerConfig {
             // ApiResponse를 responses에 추가
             responses.addApiResponse(statusKey, apiResponse);
         });
+    }
+
+    // 성공 응답 예제 생성 (200)
+    private void generateSuccessResponseExample(Operation operation, ApiSuccessResponse successMeta, String actualPath) {
+        ApiResponses responses = operation.getResponses();
+
+        String successKey = "200";
+        ApiResponse apiResponse = responses.get(successKey);
+        if (apiResponse == null) {
+            apiResponse = new ApiResponse();
+            apiResponse.setDescription(successMeta.message());
+            apiResponse.setContent(new Content());
+        }
+
+        Content content = apiResponse.getContent();
+        MediaType mediaType = content.get("application/json");
+        if (mediaType == null) {
+            mediaType = new MediaType();
+            content.addMediaType("application/json", mediaType);
+        }
+
+        Map<String, Example> examples = mediaType.getExamples();
+        if (examples == null) {
+            examples = new HashMap<>();
+            mediaType.setExamples(examples);
+        }
+
+        Map<String, Object> successResponse = new LinkedHashMap<>();
+        successResponse.put("timestamp", "2025-06-30T12:00:00.000000");
+        successResponse.put("status", 200);
+        successResponse.put("code", "SUCCESS");
+        successResponse.put("message", successMeta.message());
+        successResponse.put("path", actualPath);
+
+        // dataExample 문자열이 주어지면 JSON으로 파싱 시도 후 실패 시 문자열로 삽입
+        if (successMeta.dataExample() != null && !successMeta.dataExample().isEmpty()) {
+            Object dataValue = successMeta.dataExample();
+            successResponse.put("data", dataValue);
+        } else {
+            successResponse.put("data", new LinkedHashMap<>());
+        }
+
+        Example example = new Example();
+        example.description(successMeta.message());
+        example.setValue(successResponse);
+
+        examples.put("SUCCESS", example);
+
+        responses.addApiResponse(successKey, apiResponse);
     }
 
     // 예제 정보를 담는 내부 클래스

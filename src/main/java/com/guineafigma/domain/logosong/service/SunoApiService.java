@@ -51,7 +51,7 @@ public class SunoApiService {
         try {
             // 1. 프롬프트 구성
             String prompt = logoSong.getLyrics();
-            String style = logoSong.getMusicGenre().getDisplayName();
+            String style = logoSong.getMusicGenre();
             String title = logoSong.getServiceName() + " - Logo Song (" + logoSong.getVersion().getDisplayName() + ")";
             String model = "V3_5"; // 기본 모델
 
@@ -210,7 +210,7 @@ public class SunoApiService {
         StringBuilder tags = new StringBuilder();
         
         // 기본 장르 태그
-        tags.append(logoSong.getMusicGenre().toString().toLowerCase());
+        tags.append(String.valueOf(logoSong.getMusicGenre()).toLowerCase());
         
         // 무드 태그 추가
         if (logoSong.getMoodTone() != null && !logoSong.getMoodTone().isEmpty()) {
@@ -238,7 +238,7 @@ public class SunoApiService {
     private String selectOptimalModel(LogoSong logoSong) {
         // 버전과 장르에 따른 최적 모델 선택
         String version = logoSong.getVersion().toString();
-        String genre = logoSong.getMusicGenre().toString();
+        String genre = String.valueOf(logoSong.getMusicGenre()).toUpperCase();
         
         // 고품질이 필요한 경우 V4 사용
         if ("LONG".equals(version) || "JAZZ".equals(genre) || "CLASSICAL".equals(genre)) {

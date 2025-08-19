@@ -1,7 +1,6 @@
 package com.guineafigma.domain.logosong.entity;
 
 import com.guineafigma.common.entity.BaseEntity;
-import com.guineafigma.common.enums.MusicGenre;
 import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.common.enums.VersionType;
 
@@ -44,10 +43,9 @@ public class LogoSong extends BaseEntity {
     @Column(name = "mood_tone")
     private String moodTone;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "music_genre", nullable = false)
     @NotNull
-    private MusicGenre musicGenre;
+    private String musicGenre;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "version", nullable = false)
@@ -76,8 +74,7 @@ public class LogoSong extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "music_status")
-    @Builder.Default
-    private MusicGenerationStatus musicStatus = MusicGenerationStatus.PENDING;
+    private MusicGenerationStatus musicStatus;
 
     @Column(name = "generated_music_url")
     private String generatedMusicUrl;
@@ -120,5 +117,9 @@ public class LogoSong extends BaseEntity {
 
     public void updateGeneratedMusicUrl(String url) {
         this.generatedMusicUrl = url;
+    }
+
+    public void updateImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

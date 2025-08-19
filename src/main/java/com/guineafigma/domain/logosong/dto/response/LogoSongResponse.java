@@ -1,6 +1,5 @@
 package com.guineafigma.domain.logosong.dto.response;
 
-import com.guineafigma.common.enums.MusicGenre;
 import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.common.enums.VersionType;
 import com.guineafigma.domain.logosong.entity.LogoSong;
@@ -42,8 +41,8 @@ public class LogoSongResponse {
     @Schema(description = "음악의 분위기와 톤", example = "따뜻함, 편안함, 의류슴, 포근함")
     private String moodTone;
 
-    @Schema(description = "사용된 음악 장르", example = "ACOUSTIC")
-    private MusicGenre musicGenre;
+    @Schema(description = "사용된 음악 장르", example = "Pop")
+    private String musicGenre;
 
     @Schema(description = "로고송 길이 버전", example = "SHORT")
     private VersionType version;
@@ -78,7 +77,14 @@ public class LogoSongResponse {
     @Schema(description = "음악 생성 완료 일시", example = "2024-01-15T15:20:00")
     private LocalDateTime generatedAt;
 
+    @Schema(description = "현재 사용자의 좋아요 여부 (로그인 시에만 제공)", example = "true")
+    private Boolean isLiked;
+
     public static LogoSongResponse from(LogoSong logoSong) {
+        return from(logoSong, null);
+    }
+
+    public static LogoSongResponse from(LogoSong logoSong, Boolean isLiked) {
         return LogoSongResponse.builder()
                 .id(logoSong.getId())
                 .imageUrl(logoSong.getImageUrl())
@@ -101,6 +107,7 @@ public class LogoSongResponse {
                 .generatedAt(logoSong.getGeneratedAt())
                 .createdAt(logoSong.getCreatedAt())
                 .updatedAt(logoSong.getUpdatedAt())
+                .isLiked(isLiked)
                 .build();
     }
 }

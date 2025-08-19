@@ -14,10 +14,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -31,7 +29,7 @@ public class LogoSongLyricsService {
     @Value("${openai.api.key}")
     private String openaiApiKey;
 
-    @Value("${openai.api.url:https://api.openai.com/v1/chat/completions}")
+    @Value("${openai.api.url}")
     private String openaiApiUrl;
 
     @Value("${openai.api.model}")
@@ -42,29 +40,8 @@ public class LogoSongLyricsService {
             log.info("OpenAI API 호출 시작 - 모델: {}, API URL: {}", openaiModel, openaiApiUrl);
             String masterPrompt = buildAdvancedPrompt(request);
 
-            String content = null;
-            try {
-                content = callOpenAI(masterPrompt, openaiModel);
-                log.info("OpenAI API 호출 성공");
-            } catch (HttpClientErrorException.BadRequest e) {
-                log.error("OpenAI API BadRequest 에러: {}", e.getResponseBodyAsString());
-                String body = e.getResponseBodyAsString();
-                if (body != null && (body.contains("invalid model") || body.contains("does not exist"))) {
-                    for (String fallback : List.of("gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo")) {
-                        try {
-                            content = callOpenAI(masterPrompt, fallback);
-                            openaiModel = fallback;
-                            log.warn("OpenAI 모델 폴백 적용: {} -> {}", "invalid model", fallback);
-                            break;
-                        } catch (Exception ignore) {
-                            content = null;
-                        }
-                    }
-                    if (content == null) throw e;
-                } else {
-                    throw e;
-                }
-            }
+            String content = callOpenAI(masterPrompt, openaiModel);
+            log.info("OpenAI API 호출 성공");
             
             if (content == null || content.isEmpty()) {
                 throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);
@@ -122,62 +99,27 @@ public class LogoSongLyricsService {
         }
         
         try {
-            log.info("OpenAI 원본 응답: {}", response);
             JsonNode root = objectMapper.readTree(response);
-            log.info("OpenAI 응답 JSON 구조: {}", root.toPrettyString());
             
-            String content = "";
-            
-            // 1. output_text 필드 시도
-            if (root.has("output_text")) {
-                content = root.path("output_text").asText("");
-                log.info("output_text에서 추출: {}", content);
-            }
-            
-            // 2. output 배열에서 추출 시도 (실제 Responses API 구조)
-            if (content.isEmpty() && root.has("output")) {
-                JsonNode outputArray = root.path("output");
-                log.info("output 배열: {}", outputArray);
-                if (outputArray.isArray() && outputArray.size() > 0) {
-                    // output 배열에서 type이 "message"인 항목 찾기
-                    for (JsonNode outputItem : outputArray) {
-                        if ("message".equals(outputItem.path("type").asText(""))) {
-                            log.info("message type output 찾음: {}", outputItem);
-                            
-                            JsonNode contentArray = outputItem.path("content");
-                            if (contentArray.isArray() && contentArray.size() > 0) {
-                                // content 배열에서 첫 번째 항목의 text 필드 추출
-                                content = contentArray.get(0).path("text").asText("");
-                                log.info("message content에서 추출: {}", content);
-                                break;
+            // Responses API 구조: output 배열에서 type="message"인 항목의 content[0].text 추출
+            JsonNode outputArray = root.path("output");
+            if (outputArray.isArray() && outputArray.size() > 0) {
+                for (JsonNode outputItem : outputArray) {
+                    if ("message".equals(outputItem.path("type").asText(""))) {
+                        JsonNode contentArray = outputItem.path("content");
+                        if (contentArray.isArray() && contentArray.size() > 0) {
+                            String content = contentArray.get(0).path("text").asText("");
+                            if (!content.isEmpty()) {
+                                log.debug("응답에서 추출된 컨텐츠 길이: {}", content.length());
+                                return content;
                             }
                         }
                     }
                 }
             }
             
-            // 3. 다른 가능한 필드들 시도
-            if (content.isEmpty()) {
-                String[] possibleFields = {"text", "message", "result", "response"};
-                for (String field : possibleFields) {
-                    if (root.has(field)) {
-                        content = root.path(field).asText("");
-                        if (!content.isEmpty()) {
-                            log.info("{}에서 추출: {}", field, content);
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            log.info("최종 추출된 컨텐츠: {}", content);
-            
-            if (content.isEmpty()) {
-                log.error("모든 파싱 시도 실패 - 응답에서 텍스트를 추출할 수 없음");
-                throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);
-            }
-            
-            return content;
+            log.error("OpenAI Responses API 응답에서 텍스트를 추출할 수 없음 - 응답 구조: {}", root.toPrettyString());
+            throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);
         } catch (Exception e) {
             log.error("OpenAI 응답 파싱 실패 - 원본 응답: '{}', 에러: {}", response, e.getMessage(), e);
             throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);

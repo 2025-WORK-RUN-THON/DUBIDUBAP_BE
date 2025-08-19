@@ -145,6 +145,39 @@ public class IntegratedLogoSongService {
     }
 
     /**
+     * 가사만 재생성 (비디오 가이드라인은 유지)
+     */
+    public LogoSongResponse regenerateLyricsOnly(Long logoSongId, LogoSongCreateRequest request) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+
+        GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
+        // 가사만 교체, 비디오 가이드라인은 유지
+        logoSong.updateLyrics(guides.getLyrics());
+        logoSong.updateMusicStatus(MusicGenerationStatus.PENDING);
+        logoSongRepository.save(logoSong);
+
+        log.info("가사 재생성 완료: logoSongId={}", logoSongId);
+        return convertToResponse(logoSong);
+    }
+
+    /**
+     * 비디오 가이드라인만 (재)생성 - logosong id 기준
+     */
+    public LogoSongResponse regenerateVideoGuideOnly(Long logoSongId, LogoSongCreateRequest request) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+
+        GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
+        // 비디오 가이드라인만 교체 (가사는 유지)
+        logoSong.updateVideoGuideline(guides.getVideoGuideline());
+        logoSongRepository.save(logoSong);
+
+        log.info("비디오 가이드라인 (재)생성 완료: logoSongId={}", logoSongId);
+        return convertToResponse(logoSong);
+    }
+
+    /**
      * 음악 생성 상태 확인 (쓰기 없음, 트랜잭션 비활성화)
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)

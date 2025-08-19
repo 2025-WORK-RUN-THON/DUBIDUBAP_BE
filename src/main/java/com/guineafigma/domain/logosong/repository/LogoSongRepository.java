@@ -1,7 +1,6 @@
 package com.guineafigma.domain.logosong.repository;
 
 import com.guineafigma.domain.logosong.entity.LogoSong;
-import com.guineafigma.common.enums.MusicGenre;
 import com.guineafigma.common.enums.VersionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface LogoSongRepository extends JpaRepository<LogoSong, Long> {
 
-    Page<LogoSong> findByMusicGenre(MusicGenre musicGenre, Pageable pageable);
+    Page<LogoSong> findByMusicGenre(String musicGenre, Pageable pageable);
     
     Page<LogoSong> findByVersion(VersionType version, Pageable pageable);
     

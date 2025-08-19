@@ -130,6 +130,52 @@ public class LogoSongService {
         );
     }
 
+    public PagedResponse<LogoSongResponse> getAllLogoSongs(Pageable pageable, Long userId) {
+        Page<LogoSong> logoSongPage = logoSongRepository.findAll(pageable);
+        Page<LogoSongResponse> responsePage = logoSongPage.map(logoSong -> {
+            Boolean liked = null;
+            if (userId != null) {
+                liked = logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSong.getId());
+            }
+            return LogoSongResponse.from(logoSong, liked);
+        });
+
+        return PagedResponse.of(
+                responsePage.getContent(),
+                pageable.getPageSize(),
+                pageable.getPageNumber() + 1,
+                responsePage.getTotalPages()
+        );
+    }
+
+    public PagedResponse<LogoSongResponse> getPopularLogoSongs(Pageable pageable, Long userId) {
+        Page<LogoSong> logoSongPage = logoSongRepository.findByOrderByLikeCountDesc(pageable);
+        Page<LogoSongResponse> responsePage = logoSongPage.map(logoSong -> {
+            Boolean liked = null;
+            if (userId != null) {
+                liked = logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSong.getId());
+            }
+            return LogoSongResponse.from(logoSong, liked);
+        });
+
+        return PagedResponse.of(
+                responsePage.getContent(),
+                pageable.getPageSize(),
+                pageable.getPageNumber() + 1,
+                responsePage.getTotalPages()
+        );
+    }
+
+    public LogoSongResponse getLogoSongWithLike(Long id, Long userId) {
+        LogoSong logoSong = logoSongRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        Boolean liked = null;
+        if (userId != null) {
+            liked = logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSong.getId());
+        }
+        return LogoSongResponse.from(logoSong, liked);
+    }
+
     @Transactional
     public void toggleLike(Long logoSongId, Long userId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)

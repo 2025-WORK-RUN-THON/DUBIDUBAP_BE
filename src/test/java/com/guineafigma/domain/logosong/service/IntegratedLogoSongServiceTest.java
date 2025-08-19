@@ -1,6 +1,5 @@
 package com.guineafigma.domain.logosong.service;
 
-import com.guineafigma.common.enums.MusicGenre;
 import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.common.enums.VersionType;
 import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
@@ -140,7 +139,7 @@ public class IntegratedLogoSongServiceTest {
                 .marketingItem("혁신")
                 .targetCustomer("개발자")
                 .moodTone("밝고 활기찬")
-                .musicGenre(MusicGenre.ELECTRONIC)
+                .musicGenre("ELECTRONIC")
                 .version(VersionType.SHORT)
                 .additionalInfo("테스트용 로고송입니다.")
                 .build();
@@ -151,7 +150,7 @@ public class IntegratedLogoSongServiceTest {
                 .serviceName("테스트 서비스")
                 .slogan("테스트 슬로건")
                 .industry("IT")
-                .musicGenre(MusicGenre.POP)
+                .musicGenre("POP")
                 .version(VersionType.SHORT)
                 .lyrics("테스트 가사")
                 .videoGuideline("테스트 비디오 가이드라인")

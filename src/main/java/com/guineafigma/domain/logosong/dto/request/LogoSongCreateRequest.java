@@ -1,6 +1,5 @@
 package com.guineafigma.domain.logosong.dto.request;
 
-import com.guineafigma.common.enums.MusicGenre;
 import com.guineafigma.common.enums.VersionType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -32,9 +31,9 @@ public class LogoSongCreateRequest {
     @Schema(description = "원하는 음악의 분위기와 톤 - 콤마로 구분하여 여러 개 입력 가능", example = "따뜻함, 편안함, 의류슴, 포근함")
     private String moodTone;
 
-    @Schema(description = "로고송에 사용할 음악 장르 - 브랜드 이미지와 어울리는 스타일 선택", example = "ACOUSTIC", allowableValues = {"POP", "JAZZ", "EDM", "CLASSIC", "ELECTRONIC", "ACOUSTIC", "ROCK", "FOLK", "COUNTRY", "BALLAD"})
-    @NotNull(message = "음악 장르는 필수입니다.")
-    private MusicGenre musicGenre;
+    @Schema(description = "로고송에 사용할 음악 장르 - 브랜드 이미지와 어울리는 스타일 선택", example = "Pop")
+    @NotBlank(message = "음악 장르는 필수입니다.")
+    private String musicGenre;
 
     @Schema(description = "로고송 길이 - SHORT(15-30초), LONG(45-60초)", example = "SHORT")
     @NotNull(message = "버전 타입은 필수입니다.")

@@ -28,6 +28,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springdoc.core.annotations.ParameterObject;
 
 import java.util.Map;
 
@@ -43,21 +44,7 @@ public class LogoSongController {
     private final MusicGenerationPollingService pollingService;
     private final LogoSongLyricsService logoSongLyricsService;
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "로고송 생성", description = "새로운 로고송을 생성합니다.")
-    @ApiSuccessResponse(message = "로고송이 성공적으로 생성되었습니다.", dataType = LogoSongResponse.class)
-    @ApiErrorExamples({
-            ErrorCode.VALIDATION_ERROR,
-            ErrorCode.SERVICE_NAME_REQUIRED,
-            ErrorCode.INVALID_MUSIC_GENRE,
-            ErrorCode.INVALID_VERSION_TYPE
-    })
-    public ApiResponse<LogoSongResponse> createLogoSong(
-            @Valid @RequestBody LogoSongCreateRequest request) {
-        LogoSongResponse response = logoSongService.createLogoSong(request);
-        return ApiResponse.success(response);
-    }
+    
 
     @GetMapping("/{id}")
     @Operation(summary = "로고송 조회", description = "특정 로고송을 조회하고 조회수를 증가시킵니다.")
@@ -66,21 +53,46 @@ public class LogoSongController {
             ErrorCode.LOGOSONG_NOT_FOUND
     })
     public ApiResponse<LogoSongResponse> getLogoSong(
-            @Parameter(description = "로고송 ID") @PathVariable Long id) {
-        LogoSongResponse response = logoSongService.incrementViewCount(id);
+            @Parameter(description = "로고송 ID") @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        LogoSongResponse response;
+        if (userPrincipal != null) {
+            response = logoSongService.getLogoSongWithLike(id, userPrincipal.getId());
+        } else {
+            response = logoSongService.incrementViewCount(id);
+        }
         return ApiResponse.success(response);
     }
 
     @GetMapping
-    @Operation(summary = "로고송 목록 조회", description = "로고송 목록을 페이지네이션으로 조회합니다.")
-    @ApiSuccessResponse(message = "로고송 목록 조회가 성공적으로 처리되었습니다.", dataType = PagedResponse.class, isArray = true)
+    @Operation(
+        summary = "로고송 목록 조회",
+        description = "로고송 목록을 페이지네이션으로 조회합니다.\n\n" +
+                "쿼리 파라미터:\n" +
+                "- page: 0부터 시작하는 페이지 번호 (예: 0)\n" +
+                "- size: 페이지 당 항목 수 (예: 10)\n" +
+                "- sort: 정렬 기준, 쉼표로 방향 지정 (예: createdAt,desc)"
+    )
+    @ApiSuccessResponse(
+            message = "로고송 목록 조회가 성공적으로 처리되었습니다.",
+            dataType = PagedResponse.class,
+            isArray = true,
+            dataExample = "{\n  'items': [\n    { 'id': 1, 'serviceName': '카페 뒤비뒤밥', 'likeCount': 12, 'isLiked': true },\n    { 'id': 2, 'serviceName': '분식 더밥', 'likeCount': 5, 'isLiked': null }\n  ],\n  'size': 10,\n  'page': 1,\n  'totalPages': 5\n}"
+    )
     @ApiErrorExamples({
             ErrorCode.INVALID_INPUT_VALUE
     })
     public ApiResponse<PagedResponse<LogoSongResponse>> getAllLogoSongs(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) 
-            Pageable pageable) {
-        PagedResponse<LogoSongResponse> response = logoSongService.getAllLogoSongs(pageable);
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        PagedResponse<LogoSongResponse> response;
+        if (userPrincipal != null) {
+            response = logoSongService.getAllLogoSongs(pageable, userPrincipal.getId());
+        } else {
+            response = logoSongService.getAllLogoSongs(pageable);
+        }
         return ApiResponse.success(response);
     }
 
@@ -91,9 +103,16 @@ public class LogoSongController {
             ErrorCode.INVALID_INPUT_VALUE
     })
     public ApiResponse<PagedResponse<LogoSongResponse>> getPopularLogoSongs(
-            @PageableDefault(size = 10, sort = "likeCount", direction = Sort.Direction.DESC) 
-            Pageable pageable) {
-        PagedResponse<LogoSongResponse> response = logoSongService.getPopularLogoSongs(pageable);
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "likeCount", direction = Sort.Direction.DESC)
+            Pageable pageable,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        PagedResponse<LogoSongResponse> response;
+        if (userPrincipal != null) {
+            response = logoSongService.getPopularLogoSongs(pageable, userPrincipal.getId());
+        } else {
+            response = logoSongService.getPopularLogoSongs(pageable);
+        }
         return ApiResponse.success(response);
     }
 
@@ -171,7 +190,8 @@ public class LogoSongController {
     })
     public ApiResponse<PagedResponse<LogoSongResponse>> getMyLogoSongs(
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) 
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
         if (userPrincipal == null) {
             return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
@@ -191,7 +211,8 @@ public class LogoSongController {
     })
     public ApiResponse<PagedResponse<LogoSongResponse>> getLikedLogoSongs(
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) 
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
         if (userPrincipal == null) {
             return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
@@ -220,7 +241,16 @@ public class LogoSongController {
     }
 
     @PostMapping("/{id}/generate-music")
-    @Operation(summary = "음악 생성 트리거", description = "기존 로고송에 대해 음악 생성을 시작합니다.")
+    @Operation(summary = "음악 생성 트리거", 
+               description = "기존 로고송에 대해 음악 생성을 시작합니다.\n\n" +
+                       "처리 과정:\n" +
+                       "- Suno API를 호출하여 음악 생성 요청\n" +
+                       "- 비동기로 음악 생성 진행\n" +
+                       "- 완료 시 음악 URL과 이미지 URL 자동 업데이트\n" +
+                       "- 가사가 없는 경우 생성 불가\n\n" +
+                       "상태 확인:\n" +
+                       "- `/api/v1/logosongs/{id}/polling-status`: 실시간 상태 확인\n" +
+                       "- `/api/v1/logosongs/{id}/quick-status`: 빠른 상태 확인")
     @ApiSuccessResponse(message = "음악 생성이 시작되었습니다.")
     @ApiErrorExamples({
             ErrorCode.LOGOSONG_NOT_FOUND,
@@ -245,22 +275,19 @@ public class LogoSongController {
         return ApiResponse.success(result);
     }
 
-    @GetMapping("/{id}/download-music")
-    @Operation(summary = "생성된 음악 다운로드", description = "생성 완료된 로고송 음악의 다운로드 URL을 제공합니다.")
-    @ApiSuccessResponse(message = "음악 다운로드 URL 조회가 성공적으로 처리되었습니다.", dataType = String.class)
-    @ApiErrorExamples({
-            ErrorCode.LOGOSONG_NOT_FOUND,
-            ErrorCode.MUSIC_GENERATION_FAILED
-    })
-    public ApiResponse<String> downloadMusic(
-            @Parameter(description = "로고송 ID") @PathVariable Long id) {
-        String downloadUrl = integratedLogoSongService.getMusicDownloadUrl(id);
-        return ApiResponse.success(downloadUrl);
-    }
+    
 
     @PostMapping("/{id}/regenerate-lyrics")
-    @Operation(summary = "가사/비디오 가이드라인 재생성", description = "기존 로고송의 가사와 비디오 가이드라인을 재생성합니다.")
-    @ApiSuccessResponse(message = "가사/비디오 가이드라인 재생성이 성공적으로 처리되었습니다.", dataType = LogoSongResponse.class)
+    @Operation(summary = "가사 재생성", 
+               description = "기존 로고송의 가사만 재생성합니다.\n\n" +
+                       "처리 과정:\n" +
+                       "- OpenAI API를 호출하여 새로운 가사 생성\n" +
+                       "- 기존 가사를 새로운 가사로 교체\n" +
+                       "- 음악 상태를 PENDING으로 변경 (재생성 필요)\n\n" +
+                       "주의사항:\n" +
+                       "- 로고송 ID가 존재해야 함\n" +
+                       "- OpenAI API 키가 설정되어야 함")
+    @ApiSuccessResponse(message = "가사 재생성이 성공적으로 처리되었습니다.", dataType = LogoSongResponse.class)
     @ApiErrorExamples({
             ErrorCode.LOGOSONG_NOT_FOUND,
             ErrorCode.LYRICS_GENERATION_FAILED
@@ -268,7 +295,31 @@ public class LogoSongController {
     public ApiResponse<LogoSongResponse> regenerateLyrics(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
             @Valid @RequestBody LogoSongCreateRequest request) {
-        LogoSongResponse updated = integratedLogoSongService.regenerateLyricsAndGuide(id, request);
+        LogoSongResponse updated = integratedLogoSongService.regenerateLyricsOnly(id, request);
+        return ApiResponse.success(updated);
+    }
+
+    @PostMapping("/{id}/regenerate-video-guide")
+    @Operation(summary = "비디오 가이드라인 (재)생성", 
+               description = "기존 로고송 ID 기반으로 비디오 가이드라인만 생성/재생성합니다.\n\n" +
+                       "처리 과정:\n" +
+                       "- OpenAI API를 호출하여 새로운 비디오 가이드라인 생성\n" +
+                       "- 기존 비디오 가이드라인을 새로운 것으로 교체\n" +
+                       "- 가사는 유지됨\n" +
+                       "- 음악 상태는 변경하지 않음\n\n" +
+                       "사용 시나리오:\n" +
+                       "- 기존 가사로 다른 영상 컨셉 시도\n" +
+                       "- 비디오 가이드라인 품질 개선\n" +
+                       "- 마케팅 방향성 변경")
+    @ApiSuccessResponse(message = "비디오 가이드라인 (재)생성이 성공적으로 처리되었습니다.", dataType = LogoSongResponse.class)
+    @ApiErrorExamples({
+            ErrorCode.LOGOSONG_NOT_FOUND,
+            ErrorCode.LYRICS_GENERATION_FAILED
+    })
+    public ApiResponse<LogoSongResponse> regenerateVideoGuide(
+            @Parameter(description = "로고송 ID") @PathVariable Long id,
+            @Valid @RequestBody LogoSongCreateRequest request) {
+        LogoSongResponse updated = integratedLogoSongService.regenerateVideoGuideOnly(id, request);
         return ApiResponse.success(updated);
     }
 
