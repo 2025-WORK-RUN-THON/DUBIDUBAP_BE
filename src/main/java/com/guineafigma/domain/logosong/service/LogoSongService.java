@@ -2,6 +2,7 @@ package com.guineafigma.domain.logosong.service;
 
 import com.guineafigma.common.response.PagedResponse;
 import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
+import com.guineafigma.domain.logosong.dto.response.GuidesResponse;
 import com.guineafigma.domain.logosong.dto.response.LogoSongResponse;
 import com.guineafigma.domain.logosong.entity.LogoSong;
 import com.guineafigma.domain.logosong.entity.LogoSongLike;
@@ -28,6 +29,9 @@ public class LogoSongService {
     private final LogoSongRepository logoSongRepository;
     private final LogoSongLikeRepository logoSongLikeRepository;
 
+    
+    private final LogoSongLyricsService logoSongLyricsService;
+
     @Transactional
     public LogoSongResponse createLogoSong(LogoSongCreateRequest request) {
         LogoSong logoSong = LogoSong.builder()
@@ -40,14 +44,48 @@ public class LogoSongService {
                 .musicGenre(request.getMusicGenre())
                 .version(request.getVersion())
                 .additionalInfo(request.getAdditionalInfo())
-                .imageUrl(request.getImageUrl())
-                .logosongUrl(request.getLogosongUrl())
                 .build();
 
         LogoSong savedLogoSong = logoSongRepository.save(logoSong);
         log.info("로고송 생성 완료: {}", savedLogoSong.getId());
         
         return LogoSongResponse.from(savedLogoSong);
+    }
+
+    @Transactional
+    public Long createLogoSongWithGuides(LogoSongCreateRequest request) {
+        // 1. LogoSong 엔티티 생성
+        LogoSong logoSong = LogoSong.builder()
+                .serviceName(request.getServiceName())
+                .slogan(request.getSlogan())
+                .industry(request.getIndustry())
+                .marketingItem(request.getMarketingItem())
+                .targetCustomer(request.getTargetCustomer())
+                .moodTone(request.getMoodTone())
+                .musicGenre(request.getMusicGenre())
+                .version(request.getVersion())
+                .additionalInfo(request.getAdditionalInfo())
+                .build();
+
+        LogoSong savedLogoSong = logoSongRepository.save(logoSong);
+        log.info("로고송 엔티티 생성 완료: {}", savedLogoSong.getId());
+
+        try {
+            // 2. OpenAI API를 사용하여 가사/비디오 가이드라인 생성
+            GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
+            
+            // 3. 생성된 가사와 비디오 가이드라인으로 엔티티 업데이트
+            savedLogoSong.updateLyrics(guides.getLyrics());
+            savedLogoSong.updateVideoGuideline(guides.getVideoGuideline());
+            
+            logoSongRepository.save(savedLogoSong);
+            log.info("로고송 가사/비디오 가이드라인 생성 및 업데이트 완료: {}", savedLogoSong.getId());
+            
+            return savedLogoSong.getId();
+        } catch (Exception e) {
+            log.error("가사/비디오 가이드라인 생성 실패 - 로고송 ID: {}, 에러: {}", savedLogoSong.getId(), e.getMessage(), e);
+            throw e; // 트랜잭션 롤백을 위해 예외를 다시 던짐
+        }
     }
 
     public LogoSongResponse getLogoSong(Long id) {

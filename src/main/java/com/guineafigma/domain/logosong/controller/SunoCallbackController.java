@@ -13,7 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/callbacks")
+@RequestMapping("/callbacks")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Suno Callbacks", description = "Suno AI 콜백 엔드포인트 - Suno API에서 음악 생성 완료 시 호출되는 콜백 처리")

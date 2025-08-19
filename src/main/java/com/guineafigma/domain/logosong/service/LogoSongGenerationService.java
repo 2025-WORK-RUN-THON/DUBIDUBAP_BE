@@ -30,87 +30,82 @@ public class LogoSongGenerationService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Async("musicGenerationExecutor")
-    @Transactional
-    public CompletableFuture<Void> generateLogoSongAsync(Long logoSongId) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                log.info("비동기 로고송 생성 시작: logoSongId={}", logoSongId);
-                
-                // 1. LogoSong 조회
-                LogoSong logoSong = logoSongRepository.findById(logoSongId)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+    public void generateLogoSongAsync(Long logoSongId) {
+        try {
+            log.info("비동기 로고송 생성 시작: logoSongId={}", logoSongId);
 
-                // 2. 가사가 없으면 에러
-                if (logoSong.getLyrics() == null || logoSong.getLyrics().isEmpty()) {
-                    throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);
-                }
+            // 1. LogoSong 조회 (커밋 이후 안전하게 조회됨)
+            LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
 
-                // 3. Suno API 호출
-                String taskId = sunoApiService.generateMusic(logoSong);
-                
-                // 4. 상태 폴링 시작
-                startStatusPolling(taskId);
-                
-                log.info("비동기 로고송 생성 요청 완료: logoSongId={}, taskId={}", logoSongId, taskId);
-                
-            } catch (Exception e) {
-                log.error("비동기 로고송 생성 실패: logoSongId={}", logoSongId, e);
-                // 실패 상태로 업데이트
-                updateLogoSongStatus(logoSongId, MusicGenerationStatus.FAILED, null);
-                throw new RuntimeException("로고송 생성 실패", e);
+            // 2. 가사가 없으면 에러
+            if (logoSong.getLyrics() == null || logoSong.getLyrics().isEmpty()) {
+                throw new BusinessException(ErrorCode.LYRICS_GENERATION_FAILED);
             }
-        });
+
+            // 3. Suno API 호출
+            String taskId = sunoApiService.generateMusic(logoSong);
+
+            // 4. 상태 폴링 시작
+            startStatusPolling(taskId);
+
+            log.info("비동기 로고송 생성 요청 완료: logoSongId={}, taskId={}", logoSongId, taskId);
+
+        } catch (Exception e) {
+            log.error("비동기 로고송 생성 실패: logoSongId={}", logoSongId, e);
+            // 실패 상태로 업데이트 (트랜잭션 경계 내부에서 처리)
+            updateLogoSongStatus(logoSongId, MusicGenerationStatus.FAILED, null);
+            // 비동기에서 상위로 예외 전파하지 않음 (UnexpectedRollback 방지)
+        }
     }
 
     @Async("musicGenerationExecutor")
-    @Retryable(
-            value = {Exception.class},
-            maxAttempts = 60, // 최대 30분 폴링 (30초 간격)
-            backoff = @Backoff(delay = 30000) // 30초 대기
-    )
     public void startStatusPolling(String taskId) {
         try {
             log.debug("음악 생성 상태 폴링 시작: taskId={}", taskId);
             
-            // 상태 확인
-            MusicGenerationResult result = sunoApiService.checkMusicStatus(taskId);
+            // 30초 대기 후 첫 조회 (문서 상 최초 준비 시간 고려)
+            TimeUnit.SECONDS.sleep(30);
             
-            if (result.getStatus() == MusicGenerationStatus.COMPLETED) {
-                // 완료된 경우
-                handleMusicGenerationComplete(taskId, result);
-                log.info("음악 생성 완료: taskId={}", taskId);
-                
-            } else if (result.getStatus() == MusicGenerationStatus.FAILED) {
-                // 실패한 경우
-                handleMusicGenerationFailed(taskId, result);
-                log.error("음악 생성 실패: taskId={}, error={}", taskId, result.getErrorMessage());
-                
-            } else if (result.getStatus() == MusicGenerationStatus.PROCESSING) {
-                // 아직 처리 중인 경우 - 다시 폴링
-                log.debug("음악 생성 진행 중: taskId={}", taskId);
-                
-                // 30초 후 다시 확인
-                CompletableFuture.delayedExecutor(30, TimeUnit.SECONDS).execute(() -> {
-                    try {
-                        startStatusPolling(taskId);
-                    } catch (Exception e) {
-                        log.error("상태 폴링 재시도 실패: taskId={}", taskId, e);
-                        handleMusicGenerationFailed(taskId, MusicGenerationResult.builder()
-                                .taskId(taskId)
-                                .status(MusicGenerationStatus.FAILED)
-                                .errorMessage("상태 폴링 실패")
-                                .build());
+            // 최대 10분 동안 15초 간격으로 재시도
+            for (int attempt = 0; attempt < 40; attempt++) {
+                try {
+                    log.debug("상태 확인 시도 {}: taskId={}", attempt + 1, taskId);
+                    
+                    // 상태 확인
+                    MusicGenerationResult result = sunoApiService.checkMusicStatus(taskId);
+                    
+                    if (result.getStatus() == MusicGenerationStatus.COMPLETED) {
+                        handleMusicGenerationComplete(taskId, result);
+                        log.info("음악 생성 완료: taskId={}", taskId);
+                        return;
+                    } else if (result.getStatus() == MusicGenerationStatus.FAILED) {
+                        handleMusicGenerationFailed(taskId, result);
+                        log.error("음악 생성 실패: taskId={}, error={}", taskId, result.getErrorMessage());
+                        return;
+                    } else if (result.getStatus() == MusicGenerationStatus.PROCESSING || result.getStatus() == MusicGenerationStatus.PENDING) {
+                        // 아직 처리 중인 경우 - 계속 폴링
+                        log.debug("음악 생성 진행 중: taskId={}, attempt={}", taskId, attempt + 1);
                     }
-                });
+                    
+                } catch (Exception e) {
+                    // 일시적 오류인 경우 계속 재시도 (404 등)
+                    log.warn("상태 확인 일시 오류 (재시도): taskId={}, attempt={}, msg={}", 
+                            taskId, attempt + 1, e.getMessage());
+                }
+                
+                // 마지막 시도가 아니면 15초 대기
+                if (attempt < 39) {
+                    TimeUnit.SECONDS.sleep(15);
+                }
             }
+            
+            // 타임아웃 처리: 여전히 완료/실패 아님 → PROCESSING 유지
+            log.warn("음악 생성 상태 확인 타임아웃: taskId={}", taskId);
             
         } catch (Exception e) {
             log.error("음악 생성 상태 폴링 실패: taskId={}", taskId, e);
-            handleMusicGenerationFailed(taskId, MusicGenerationResult.builder()
-                    .taskId(taskId)
-                    .status(MusicGenerationStatus.FAILED)
-                    .errorMessage("상태 확인 실패: " + e.getMessage())
-                    .build());
+            // 즉시 실패로 전환하지 않고 PROCESSING 유지 (콜백 대기 또는 다음 배치 확인)
         }
     }
 
@@ -123,6 +118,9 @@ public class LogoSongGenerationService {
             // 상태 업데이트
             logoSong.updateMusicStatus(MusicGenerationStatus.COMPLETED);
             logoSong.updateGeneratedMusicUrl(result.getAudioUrl());
+            if (result.getImageUrl() != null && !result.getImageUrl().isEmpty()) {
+                logoSong.setImageUrl(result.getImageUrl());
+            }
             logoSongRepository.save(logoSong);
 
             // 완료 이벤트 발행

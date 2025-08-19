@@ -47,20 +47,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/logosongs/*/like-status").authenticated()
                         .requestMatchers("/api/v1/logosongs/my/**").authenticated()
                         .requestMatchers("/api/v1/media/upload").authenticated()
-                        // 컨트롤러에 선언된 "/api/..." + 전역 prefix("/api/v1")가 합쳐진 실제 경로도 포함
-                        .requestMatchers("/api/v1/api/auth/logout").authenticated()
-                        .requestMatchers("/api/v1/api/auth/me").authenticated()
-                        .requestMatchers("/api/v1/api/logosongs/*/like").authenticated()
-                        .requestMatchers("/api/v1/api/logosongs/*/like-status").authenticated()
-                        .requestMatchers("/api/v1/api/logosongs/my/**").authenticated()
-                        .requestMatchers("/api/v1/api/media/upload").authenticated()
+                        // 중복된 "/api" 제거 (실제 노출 경로는 "/api/v1/..." 만 사용)
                         // 공개 엔드포인트
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/logosongs").permitAll()
                         .requestMatchers("/api/v1/logosongs/**").permitAll()
-                        .requestMatchers("/api/v1/api/auth/login").permitAll()
-                        .requestMatchers("/api/v1/api/logosongs").permitAll()
-                        .requestMatchers("/api/v1/api/logosongs/**").permitAll()
+                        // 중복 패턴 제거
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().permitAll()

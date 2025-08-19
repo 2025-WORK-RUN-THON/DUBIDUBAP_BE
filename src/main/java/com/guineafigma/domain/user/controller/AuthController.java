@@ -21,7 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "사용자 인증 및 계정 관리 API - JWT 기반 로그인/가입 및 사용자 정보 관리")
@@ -34,8 +34,11 @@ public class AuthController {
     @Operation(
         summary = "로그인/가입", 
         description = "닉네임과 비밀번호로 로그인하거나 신규 가입합니다. " +
-                    "기존 사용자의 경우 로그인, 신규 사용자의 경우 자동 가입 후 로그인합니다. " +
-                    "성공 시 JWT 액세스 토큰을 반환합니다."
+                    "\n- 기존 사용자의 경우 로그인, 신규 사용자의 경우 자동 가입 후 로그인합니다. " +
+                    "\n- 성공 시 JWT 액세스 토큰을 반환합니다." +
+                    "\n- 신규 가입 시 닉네임은 중복 불가능합니다." +
+                    "\n- 비밀번호는 4자 이상 입력해주세요." +
+                    "\n- 로그아웃 후 로그인하려면 기존 토큰은 폐기해주세요."
     )
     @ApiSuccessResponse(
         message = "로그인/가입이 성공적으로 처리되었습니다.", 

@@ -10,6 +10,7 @@ import com.guineafigma.domain.logosong.dto.response.MusicGenerationStatusRespons
 import com.guineafigma.domain.logosong.service.LogoSongService;
 import com.guineafigma.domain.logosong.service.IntegratedLogoSongService;
 import com.guineafigma.domain.logosong.service.MusicGenerationPollingService;
+import com.guineafigma.domain.logosong.service.LogoSongLyricsService;
 import com.guineafigma.global.config.SwaggerConfig.ApiErrorExamples;
 import com.guineafigma.global.config.SwaggerConfig.ApiSuccessResponse;
 import com.guineafigma.global.config.security.CustomUserPrincipal;
@@ -28,8 +29,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/logosongs")
+@RequestMapping("/logosongs")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "LogoSong", description = "로고송 관리 API")
@@ -38,6 +41,7 @@ public class LogoSongController {
     private final LogoSongService logoSongService;
     private final IntegratedLogoSongService integratedLogoSongService;
     private final MusicGenerationPollingService pollingService;
+    private final LogoSongLyricsService logoSongLyricsService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -93,7 +97,28 @@ public class LogoSongController {
         return ApiResponse.success(response);
     }
 
-    // guides 생성 엔드포인트는 assistant 도메인으로 이동됨 (/api/v1/assistant/guides)
+    @PostMapping("/guides")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "가사/비디오 가이드라인 생성", 
+        description = "브랜드 정보를 기반으로 LogoSong 엔티티를 생성한 뒤 OpenAI API로 가사/비디오 가이드라인을 생성하여 저장하고, 업데이트된 전체 레코드를 반환합니다."
+    )
+    @ApiSuccessResponse(
+        message = "가사/비디오 가이드라인 생성이 성공적으로 처리되었습니다.", 
+        dataType = LogoSongResponse.class
+    )
+    @ApiErrorExamples({
+        ErrorCode.VALIDATION_ERROR,
+        ErrorCode.SERVICE_NAME_REQUIRED,
+        ErrorCode.LYRICS_GENERATION_FAILED,
+        ErrorCode.INTERNAL_SERVER_ERROR
+    })
+    public ApiResponse<LogoSongResponse> generateGuides(
+        @Parameter(description = "로고송 생성 요청 정보 - 브랜드 및 음악 스타일 정보 포함", required = true)
+        @Valid @RequestBody LogoSongCreateRequest request) {
+        LogoSongResponse response = integratedLogoSongService.createLogoSongWithGuidesOnly(request);
+        return ApiResponse.success(response);
+    }
 
     @PostMapping("/{id}/like")
     @SecurityRequirement(name = "JWT")
@@ -235,16 +260,16 @@ public class LogoSongController {
 
     @PostMapping("/{id}/regenerate-lyrics")
     @Operation(summary = "가사/비디오 가이드라인 재생성", description = "기존 로고송의 가사와 비디오 가이드라인을 재생성합니다.")
-    @ApiSuccessResponse(message = "가사/비디오 가이드라인 재생성이 성공적으로 처리되었습니다.", dataType = GuidesResponse.class)
+    @ApiSuccessResponse(message = "가사/비디오 가이드라인 재생성이 성공적으로 처리되었습니다.", dataType = LogoSongResponse.class)
     @ApiErrorExamples({
             ErrorCode.LOGOSONG_NOT_FOUND,
             ErrorCode.LYRICS_GENERATION_FAILED
     })
-    public ApiResponse<GuidesResponse> regenerateLyrics(
+    public ApiResponse<LogoSongResponse> regenerateLyrics(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
             @Valid @RequestBody LogoSongCreateRequest request) {
-        GuidesResponse guides = integratedLogoSongService.regenerateLyricsAndGuide(id, request);
-        return ApiResponse.success(guides);
+        LogoSongResponse updated = integratedLogoSongService.regenerateLyricsAndGuide(id, request);
+        return ApiResponse.success(updated);
     }
 
     // =========================== 웹 클라이언트 폴링 전용 엔드포인트 ===========================
@@ -274,5 +299,42 @@ public class LogoSongController {
             @Parameter(description = "로고송 ID") @PathVariable Long id) {
         MusicGenerationStatusResponse status = pollingService.getQuickPollingStatus(id);
         return ApiResponse.success(status);
+    }
+
+    // =========================== Suno API 콜백 엔드포인트 ===========================
+
+    @PostMapping("/suno-callback")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Suno API 콜백 처리", 
+               description = "Suno API에서 음악 생성 완료 시 호출하는 콜백 엔드포인트입니다.")
+    @ApiSuccessResponse(message = "콜백 처리가 성공적으로 완료되었습니다.")
+    @ApiErrorExamples({
+            ErrorCode.INVALID_INPUT_VALUE,
+            ErrorCode.SUNO_TASK_NOT_FOUND
+    })
+    public ApiResponse<Void> handleSunoCallback(
+            @Parameter(description = "Suno API 콜백 데이터", required = true)
+            @RequestBody Map<String, Object> callbackData) {
+        log.info("Suno API 콜백 수신: {}", callbackData);
+        
+        try {
+            // 콜백 데이터에서 taskId와 상태 정보 추출
+            String taskId = (String) callbackData.get("taskId");
+            String status = (String) callbackData.get("status");
+            
+            if (taskId == null) {
+                log.error("콜백 데이터에 taskId가 없습니다: {}", callbackData);
+                return ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            
+            // 서비스에서 콜백 처리
+            // TODO: 실제 콜백 데이터 구조에 맞게 처리 로직 구현
+            log.info("Suno 콜백 처리 완료: taskId={}, status={}", taskId, status);
+            
+            return ApiResponse.success();
+        } catch (Exception e) {
+            log.error("Suno 콜백 처리 중 오류 발생", e);
+            return ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 }

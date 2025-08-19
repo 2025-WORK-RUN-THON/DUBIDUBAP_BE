@@ -16,46 +16,46 @@ import java.time.LocalDateTime;
 @Schema(description = "음악 생성 상태 응답 (웹 클라이언트 폴링용)")
 public class MusicGenerationStatusResponse {
 
-    @Schema(description = "로고송 ID")
+    @Schema(description = "음악 생성 대상 로고송의 고유 식별자", example = "123")
     private Long logoSongId;
 
-    @Schema(description = "Suno API 작업 ID")
+    @Schema(description = "Suno AI 음악 생성 작업의 고유 식별자", example = "550e8400-e29b-41d4-a716-446655440000")
     private String taskId;
 
     @Schema(description = "음악 생성 상태", example = "PROCESSING")
     private MusicGenerationStatus status;
 
-    @Schema(description = "진행률 (0-100)", example = "75")
+    @Schema(description = "음악 생성 진행률 (0-100% 백분율)", example = "75")
     private Integer progress;
 
-    @Schema(description = "상태 메시지", example = "음악 생성 중...")
+    @Schema(description = "사용자에게 노출할 상태 메시지", example = "음악 생성 중입니다...")
     private String statusMessage;
 
-    @Schema(description = "생성된 음악 URL (완료 시)")
+    @Schema(description = "생성 완료된 음악 파일 다운로드 URL (상태가 COMPLETED일 때만 제공)", example = "https://cdn1.suno.ai/550e8400-e29b-41d4-a716-446655440000.mp3")
     private String audioUrl;
 
-    @Schema(description = "생성된 비디오 URL (완료 시)")
+    @Schema(description = "생성 완료된 비디오 파일 URL (옵션얼, Suno에서 제공시)", example = "https://cdn1.suno.ai/550e8400-e29b-41d4-a716-446655440000.mp4")
     private String videoUrl;
 
-    @Schema(description = "음악 길이 (초, 완료 시)")
+    @Schema(description = "생성된 음악의 재생 시간 (초 단위, 완료 시만 제공)", example = "25.5")
     private Double duration;
 
-    @Schema(description = "예상 완료 시간 (초)")
+    @Schema(description = "예상 완료까지 남은 시간 (초 단위, 진행 중일 때만 제공)", example = "120")
     private Integer estimatedCompletionSeconds;
 
-    @Schema(description = "오류 메시지 (실패 시)")
+    @Schema(description = "음악 생성 실패 시 상세 오류 메시지 (상태가 FAILED일 때만 제공)", example = "Content violates usage policy")
     private String errorMessage;
 
-    @Schema(description = "음악 생성 시작 시간")
+    @Schema(description = "음악 생성 작업이 시작된 일시", example = "2024-01-15T14:30:00")
     private LocalDateTime startedAt;
 
-    @Schema(description = "음악 생성 완료 시간")
+    @Schema(description = "음악 생성이 완료된 일시 (완료 또는 실패 시만 제공)", example = "2024-01-15T14:35:30")
     private LocalDateTime completedAt;
 
-    @Schema(description = "다음 폴링 권장 간격 (초)", example = "5")
+    @Schema(description = "클라이언트가 다음 폴링을 수행할 권장 간격 (초 단위)", example = "5")
     private Integer nextPollInterval;
 
-    @Schema(description = "폴링 만료 시간 (완료되지 않으면 중단)")
+    @Schema(description = "폴링 만료 예정 시간 (이 시간 이후에도 완료되지 않으면 폴링 중단 권장)", example = "2024-01-15T15:00:00")
     private LocalDateTime pollExpiresAt;
 
     public static MusicGenerationStatusResponse processing(Long logoSongId, String taskId, LocalDateTime startedAt) {

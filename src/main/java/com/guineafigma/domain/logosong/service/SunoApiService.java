@@ -13,6 +13,7 @@ import com.guineafigma.global.exception.BusinessException;
 import com.guineafigma.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,9 @@ public class SunoApiService {
     private final SunoApiClient sunoApiClient;
     private final LogoSongRepository logoSongRepository;
 
+    @Value("${app.domain:http://localhost:8080}")
+    private String appDomain;
+
     @Retryable(
             value = {BusinessException.class},
             maxAttempts = 3,
@@ -36,20 +40,30 @@ public class SunoApiService {
     )
     public String generateMusic(LogoSong logoSong) {
         if (logoSong.getMusicStatus() == MusicGenerationStatus.PROCESSING) {
+            // 이미 진행 중이면 기존 taskId를 그대로 반환하여 멱등성 보장
+            if (logoSong.getSunoTaskId() != null) {
+                log.info("이미 진행 중인 Suno 작업 재사용: logoSongId={}, taskId={}", logoSong.getId(), logoSong.getSunoTaskId());
+                return logoSong.getSunoTaskId();
+            }
             throw new BusinessException(ErrorCode.MUSIC_GENERATION_IN_PROGRESS);
         }
 
         try {
-            // 고급 프롬프트 엔지니어링 적용
-            String prompt = buildAdvancedMusicPrompt(logoSong);
-            String tags = buildMusicTags(logoSong);
-            String title = buildMusicTitle(logoSong);
-            String model = selectOptimalModel(logoSong);
+            // 1. 프롬프트 구성
+            String prompt = logoSong.getLyrics();
+            String style = logoSong.getMusicGenre().getDisplayName();
+            String title = logoSong.getServiceName() + " - Logo Song (" + logoSong.getVersion().getDisplayName() + ")";
+            String model = "V3_5"; // 기본 모델
 
-            SunoGenerateRequest request = SunoGenerateRequest.of(prompt, tags, title, model);
-            
+            // 2. 콜백 URL 설정 (더미 URL 사용 - 폴링 방식으로 상태 확인)
+            String callBackUrl = "https://dummy-callback.com";
+
             log.info("Suno API 음악 생성 시작: logoSongId={}, title={}", logoSong.getId(), title);
-            
+
+            // 3. Suno API 요청 생성
+            SunoGenerateRequest request = SunoGenerateRequest.of(prompt, style, title, model, callBackUrl);
+
+            // 4. Suno API 호출
             SunoGenerateResponse response = sunoApiClient.generateMusic(request);
             
             if (response.getId() != null) {
@@ -78,6 +92,36 @@ public class SunoApiService {
     @Transactional(readOnly = true)
     public MusicGenerationResult checkMusicStatus(String taskId) {
         try {
+            // 1) 우선 record-info로 상세 조회 (문서 권장)
+            var recordInfo = sunoApiClient.getGenerateRecordInfo(taskId);
+            if (recordInfo.getCode() != null && recordInfo.getCode() == 200 && recordInfo.getData() != null) {
+                String status = recordInfo.getData().getStatus();
+                MusicGenerationStatus mapped = switch (status) {
+                    case "SUCCESS" -> MusicGenerationStatus.COMPLETED;
+                    case "PENDING", "TEXT_SUCCESS", "FIRST_SUCCESS" -> MusicGenerationStatus.PROCESSING;
+                    default -> MusicGenerationStatus.PROCESSING;
+                };
+
+                String audioUrl = null;
+                String imageUrl = null;
+                Double duration = null;
+                if (recordInfo.getData().getResponse() != null && recordInfo.getData().getResponse().getSunoData() != null && !recordInfo.getData().getResponse().getSunoData().isEmpty()) {
+                    var first = recordInfo.getData().getResponse().getSunoData().get(0);
+                    audioUrl = first.getAudioUrl() != null ? first.getAudioUrl() : first.getStreamAudioUrl();
+                    imageUrl = first.getImageUrl();
+                    duration = first.getDuration();
+                }
+
+                return MusicGenerationResult.builder()
+                        .taskId(taskId)
+                        .status(mapped)
+                        .audioUrl(audioUrl)
+                        .imageUrl(imageUrl)
+                        .duration(duration)
+                        .build();
+            }
+
+            // 2) 폴백: 기존 get API
             SunoStatusResponse response = sunoApiClient.getGenerationStatus(taskId);
             return MusicGenerationResult.fromSunoStatus(response);
         } catch (BusinessException e) {
@@ -198,11 +242,11 @@ public class SunoApiService {
         
         // 고품질이 필요한 경우 V4 사용
         if ("LONG".equals(version) || "JAZZ".equals(genre) || "CLASSICAL".equals(genre)) {
-            return "v4";
+            return "V4";
         }
         
         // 일반적인 경우 V3_5 사용 (비용 효율적)
-        return "v3_5";
+        return "V3_5";
     }
 
     private String getVersionDuration(Object version) {

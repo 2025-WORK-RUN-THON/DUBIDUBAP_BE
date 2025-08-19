@@ -9,24 +9,24 @@ import lombok.Data;
 @Schema(description = "로그인/가입 응답")
 public class LoginResponse {
 
-    @Schema(description = "사용자 ID")
+    @Schema(description = "사용자 고유 식별자", example = "456")
     private Long userId;
 
-    @Schema(description = "닉네임")
+    @Schema(description = "로그인한 사용자의 닉네임", example = "로고송유저")
     private String nickname;
 
-    @Schema(description = "JWT 액세스 토큰")
+    @Schema(description = "API 인증에 사용할 JWT 액세스 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     private String accessToken;
 
-    @Schema(description = "토큰 타입", example = "Bearer")
+    @Schema(description = "Authorization 헤더에 사용할 토큰 타입", example = "Bearer")
     private String tokenType;
 
-    @Schema(description = "토큰 만료 시간 (초)")
+    @Schema(description = "토큰 만료까지 남은 시간 (초 단위)", example = "14400")
     private Long expiresIn;
 
-    @Schema(description = "신규 가입 여부")
+    @Schema(description = "이번에 신규 가입한 사용자인지 여부", example = "false")
     private Boolean isNewUser;
 
-    @Schema(description = "메시지")
+    @Schema(description = "로그인 결과 메시지", example = "로그인 성공")
     private String message;
 }

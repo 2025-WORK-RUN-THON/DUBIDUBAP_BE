@@ -12,32 +12,60 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SunoGenerateRequest {
 
-    @JsonProperty("prompt")
-    private String prompt;
+    @JsonProperty("customMode")
+    private Boolean customMode;
 
-    @JsonProperty("make_instrumental")
-    private Boolean makeInstrumental;
-
-    @JsonProperty("wait_audio")
-    private Boolean waitAudio;
+    @JsonProperty("instrumental")
+    private Boolean instrumental;
 
     @JsonProperty("model")
     private String model;
 
-    @JsonProperty("tags")
-    private String tags;
+    @JsonProperty("callBackUrl")
+    private String callBackUrl;
+
+    @JsonProperty("prompt")
+    private String prompt;
+
+    @JsonProperty("style")
+    private String style;
 
     @JsonProperty("title")
     private String title;
 
-    public static SunoGenerateRequest of(String prompt, String tags, String title, String model) {
+    @JsonProperty("negativeTags")
+    private String negativeTags;
+
+    @JsonProperty("vocalGender")
+    private String vocalGender;
+
+    @JsonProperty("styleWeight")
+    private Double styleWeight;
+
+    @JsonProperty("weirdnessConstraint")
+    private Double weirdnessConstraint;
+
+    @JsonProperty("audioWeight")
+    private Double audioWeight;
+
+    public static SunoGenerateRequest of(String prompt, String style, String title, String model, String callBackUrl) {
         return SunoGenerateRequest.builder()
+                .customMode(true)
+                .instrumental(false)
+                .model(model != null ? model : "V3_5")
+                .callBackUrl(callBackUrl)
                 .prompt(prompt)
-                .makeInstrumental(false)
-                .waitAudio(false)
-                .model(model != null ? model : "v4")
-                .tags(tags)
+                .style(style)
                 .title(title)
+                .vocalGender("m")
+                .styleWeight(0.65)
+                .weirdnessConstraint(0.65)
+                .audioWeight(0.65)
                 .build();
+    }
+
+    // Backward compatibility for existing tests/usages without callback URL
+    public static SunoGenerateRequest of(String prompt, String style, String title, String model) {
+        return of(prompt, style, title, model, null);
     }
 }
