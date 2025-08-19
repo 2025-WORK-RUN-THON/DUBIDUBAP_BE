@@ -44,7 +44,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/logout").authenticated()
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         .requestMatchers("/api/v1/logosongs/*/like").authenticated()
-                        .requestMatchers("/api/v1/logosongs/*/like-status").authenticated()
                         .requestMatchers("/api/v1/logosongs/my/**").authenticated()
                         .requestMatchers("/api/v1/media/upload").authenticated()
                         // 중복된 "/api" 제거 (실제 노출 경로는 "/api/v1/..." 만 사용)

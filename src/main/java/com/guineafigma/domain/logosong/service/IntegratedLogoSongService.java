@@ -116,9 +116,9 @@ public class IntegratedLogoSongService {
     // 가사만 재생성 (비디오 가이드라인은 유지)
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public LogoSongResponse regenerateLyricsOnly(Long logoSongId, LogoSongCreateRequest request) {
-        GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
+        String lyrics = logoSongLyricsService.generateLyricsOnly(request);
         LogoSongResponse updated = logoSongService.updateLyricsOnlyAndSetPending(
-                logoSongId, guides.getLyrics());
+                logoSongId, lyrics);
         log.info("가사 재생성 완료: logoSongId={}", logoSongId);
         return updated;
     }

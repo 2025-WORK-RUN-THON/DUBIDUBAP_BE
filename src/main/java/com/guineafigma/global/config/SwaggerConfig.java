@@ -179,7 +179,7 @@ public class SwaggerConfig {
     private Example createErrorExample(ErrorCode errorCode, String actualPath) {
         // 에러 응답 객체 생성
         Map<String, Object> errorResponse = new LinkedHashMap<>();
-        errorResponse.put("timestamp", "2025-06-30T12:00:00.000000");
+        errorResponse.put("timestamp", "2025-08-19T12:00:00.000000");
         errorResponse.put("status", errorCode.getStatus().value());
         errorResponse.put("code", errorCode.getCode());
         errorResponse.put("message", errorCode.getMessage());
@@ -297,7 +297,7 @@ public class SwaggerConfig {
         }
 
         Map<String, Object> successResponse = new LinkedHashMap<>();
-        successResponse.put("timestamp", "2025-06-30T12:00:00.000000");
+        successResponse.put("timestamp", "2025-08-19T12:00:00.000000");
         successResponse.put("status", successMeta.httpStatus());
         successResponse.put("code", "SUCCESS");
         successResponse.put("message", successMeta.message());

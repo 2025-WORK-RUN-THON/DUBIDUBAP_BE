@@ -81,29 +81,7 @@ class LogoSongControllerAuthTest {
         }
     }
 
-    @Test
-    @DisplayName("좋아요 상태 확인 - 인증 없이 시도")
-    void getLikeStatus_NoAuth_RealAPI() {
-        // When
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                baseUrl + "/api/v1/logosongs/1/like-status",
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<Map<String, Object>>() {}
-        );
-
-        // Then
-        System.out.println("좋아요 상태 확인 (인증 없음) 응답 상태: " + response.getStatusCode());
-        assertNotNull(response);
-        assertNotNull(response.getStatusCode());
-        
-        // 인증 오류 응답이면 정상
-        if (response.getStatusCode() == HttpStatus.UNAUTHORIZED || response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            System.out.println("인증 없는 좋아요 상태 확인 에러 응답 확인 완료!");
-        } else {
-            System.out.println("예상과 다른 응답: " + response.getStatusCode());
-        }
-    }
+    
 
     @Test
     @DisplayName("내 로고송 목록 조회 - 인증 없이 시도")

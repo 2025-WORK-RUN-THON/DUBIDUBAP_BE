@@ -4,7 +4,6 @@ import com.guineafigma.common.response.ApiResponse;
 import com.guineafigma.common.response.PagedResponse;
 import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
 import com.guineafigma.domain.logosong.dto.response.LogoSongResponse;
-import com.guineafigma.domain.logosong.dto.response.MusicGenerationResult;
 import com.guineafigma.domain.logosong.dto.response.MusicGenerationStatusResponse;
 import com.guineafigma.domain.logosong.service.LogoSongService;
 import com.guineafigma.domain.logosong.service.IntegratedLogoSongService;
@@ -52,12 +51,10 @@ public class LogoSongController {
     public ApiResponse<LogoSongResponse> getLogoSong(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
-        LogoSongResponse response;
-        if (userPrincipal != null) {
-            response = logoSongService.getLogoSongWithLike(id, userPrincipal.getId());
-        } else {
-            response = logoSongService.incrementViewCount(id);
-        }
+        LogoSongResponse response = logoSongService.incrementViewCountWithLike(
+                id,
+                userPrincipal != null ? userPrincipal.getId() : null
+        );
         return ApiResponse.success(response);
     }
 
@@ -168,25 +165,7 @@ public class LogoSongController {
         return ApiResponse.success(null);
     }
 
-    @GetMapping("/{id}/like-status")
-    @SecurityRequirement(name = "JWT")
-    @Operation(summary = "좋아요 상태 확인", description = "사용자의 특정 로고송 좋아요 상태를 확인합니다.")
-    @ApiSuccessResponse(message = "좋아요 상태 조회가 성공적으로 처리되었습니다.", dataType = Boolean.class)
-    @ApiErrorExamples({
-            ErrorCode.AUTHENTICATION_REQUIRED,
-            ErrorCode.INVALID_TOKEN,
-            ErrorCode.LOGOSONG_NOT_FOUND,
-            ErrorCode.USER_NOT_FOUND
-    })
-    public ApiResponse<Boolean> getLikeStatus(
-            @Parameter(description = "로고송 ID") @PathVariable Long id,
-            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
-        if (userPrincipal == null) {
-            return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
-        }
-        boolean isLiked = logoSongService.isLikedByUser(id, userPrincipal.getId());
-        return ApiResponse.success(isLiked);
-    }
+    
 
     @GetMapping("/my")
     @SecurityRequirement(name = "JWT")
@@ -251,15 +230,13 @@ public class LogoSongController {
 
     @PostMapping("/{id}/generate-music")
     @Operation(summary = "음악 생성 트리거", 
-               description = "기존 로고송에 대해 음악 생성을 시작합니다.\n\n" +
-                       "처리 과정:\n" +
-                       "- Suno API를 호출하여 음악 생성 요청\n" +
-                       "- 비동기로 음악 생성 진행\n" +
-                       "- 완료 시 음악 URL과 이미지 URL 자동 업데이트\n" +
-                       "- 가사가 없는 경우 생성 불가\n\n" +
-                       "상태 확인:\n" +
-                       "- `/api/v1/logosongs/{id}/polling-status`: 실시간 상태 확인\n" +
-                       "- `/api/v1/logosongs/{id}/quick-status`: 빠른 상태 확인")
+           description = "기존 로고송에 대해 음악 생성을 시작합니다.\n\n" +
+                   "처리 과정:\n" +
+                   "- Suno API를 호출하여 음악 생성 요청\n" +
+                   "- 비동기로 음악 생성 진행\n" +
+                   "- 완료 시 음악 URL과 이미지 URL 자동 업데이트\n" +
+                   "- 가사가 없는 경우 생성 불가\n\n" +
+                   "상태 확인: `/api/v1/logosongs/{id}/status`")
     @ApiSuccessResponse(message = "음악 생성이 시작되었습니다.")
     @ApiErrorExamples({
             ErrorCode.LOGOSONG_NOT_FOUND,
@@ -272,16 +249,16 @@ public class LogoSongController {
         return ApiResponse.success();
     }
 
-    @GetMapping("/{id}/generation-status")
-    @Operation(summary = "음악 생성 상태 확인", description = "로고송의 음악 생성 진행 상태를 확인합니다.")
-    @ApiSuccessResponse(message = "음악 생성 상태 조회가 성공적으로 처리되었습니다.", dataType = MusicGenerationResult.class)
+    @GetMapping("/{id}/status")
+    @Operation(summary = "음악 생성 상태 조회", description = "단일 엔드포인트로 음악 생성 상태를 조회합니다. 내부 캐시/DB 확인 후 필요시 외부 상태도 반영합니다.")
+    @ApiSuccessResponse(message = "음악 생성 상태 조회가 성공적으로 처리되었습니다.", dataType = MusicGenerationStatusResponse.class)
     @ApiErrorExamples({
             ErrorCode.LOGOSONG_NOT_FOUND
     })
-    public ApiResponse<MusicGenerationResult> getMusicGenerationStatus(
+    public ApiResponse<MusicGenerationStatusResponse> getStatus(
             @Parameter(description = "로고송 ID") @PathVariable Long id) {
-        MusicGenerationResult result = integratedLogoSongService.checkMusicGenerationStatus(id);
-        return ApiResponse.success(result);
+        MusicGenerationStatusResponse status = pollingService.getPollingStatus(id);
+        return ApiResponse.success(status);
     }
 
     
@@ -322,34 +299,7 @@ public class LogoSongController {
         return ApiResponse.success(updated);
     }
 
-    // =========================== 웹 클라이언트 폴링 전용 엔드포인트 ===========================
-
-    @GetMapping("/{id}/polling-status")
-    @Operation(summary = "음악 생성 상태 폴링 (웹 클라이언트용)", 
-               description = "웹 클라이언트가 주기적으로 호출하여 음악 생성 진행 상태를 확인합니다. " +
-                       "진행률, 예상 완료 시간, 다음 폴링 간격 등을 제공합니다.")
-    @ApiSuccessResponse(message = "음악 생성 상태 조회가 성공적으로 처리되었습니다.", dataType = MusicGenerationStatusResponse.class)
-    @ApiErrorExamples({
-            ErrorCode.LOGOSONG_NOT_FOUND
-    })
-    public ApiResponse<MusicGenerationStatusResponse> getPollingStatus(
-            @Parameter(description = "로고송 ID") @PathVariable Long id) {
-        MusicGenerationStatusResponse status = pollingService.getPollingStatus(id);
-        return ApiResponse.success(status);
-    }
-
-    @GetMapping("/{id}/quick-status")
-    @Operation(summary = "빠른 상태 확인 (웹 클라이언트용)", 
-               description = "DB만 확인하여 빠르게 상태를 반환합니다. Suno API 호출 없이 캐시된 상태만 반환합니다.")
-    @ApiSuccessResponse(message = "빠른 상태 조회가 성공적으로 처리되었습니다.", dataType = MusicGenerationStatusResponse.class)
-    @ApiErrorExamples({
-            ErrorCode.LOGOSONG_NOT_FOUND
-    })
-    public ApiResponse<MusicGenerationStatusResponse> getQuickStatus(
-            @Parameter(description = "로고송 ID") @PathVariable Long id) {
-        MusicGenerationStatusResponse status = pollingService.getQuickPollingStatus(id);
-        return ApiResponse.success(status);
-    }
+    // 상태 엔드포인트 통합: /{id}/status
 
     // =========================== Suno API 콜백 엔드포인트 ===========================
 

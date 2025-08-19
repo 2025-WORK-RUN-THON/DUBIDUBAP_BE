@@ -71,6 +71,12 @@ dependencies {
 	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework:spring-aspects'
 
+	// Spring Cache Abstraction
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+	// Caffeine Cache
+	implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+
 }
 
 tasks.named('test') {

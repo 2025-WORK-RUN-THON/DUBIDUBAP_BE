@@ -67,4 +67,18 @@ public class MusicGenerationResult {
                 .errorType(request.getErrorType())
                 .build();
     }
+
+    public static MusicGenerationResult fromStatusResponse(MusicGenerationStatusResponse response) {
+        if (response == null) {
+            return null;
+        }
+        return MusicGenerationResult.builder()
+                .taskId(response.getTaskId())
+                .status(response.getStatus())
+                .audioUrl(response.getAudioUrl())
+                .videoUrl(response.getVideoUrl())
+                .duration(response.getDuration())
+                .errorMessage(response.getErrorMessage())
+                .build();
+    }
 }

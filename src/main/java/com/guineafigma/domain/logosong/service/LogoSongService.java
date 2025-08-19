@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class LogoSongService {
     private final LogoSongLyricsService logoSongLyricsService;
 
     @Transactional
+    @CacheEvict(value = {"logosong:list", "logosong:popular"}, allEntries = true)
     public LogoSongResponse createLogoSong(LogoSongCreateRequest request) {
         LogoSong logoSong = LogoSong.builder()
                 .serviceName(request.getServiceName())
@@ -53,6 +56,7 @@ public class LogoSongService {
     }
 
     @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular", "logosong:quickStatus"}, allEntries = true)
     public LogoSongResponse updateLyricsAndVideoGuide(Long logoSongId, String lyrics, String videoGuideline) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -63,6 +67,7 @@ public class LogoSongService {
     }
 
     @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular", "logosong:quickStatus", "suno:status"}, allEntries = true)
     public void setMusicStatus(Long logoSongId, MusicGenerationStatus status) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -71,16 +76,19 @@ public class LogoSongService {
     }
 
     @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular", "logosong:quickStatus"}, allEntries = true)
     public LogoSongResponse updateLyricsOnlyAndSetPending(Long logoSongId, String lyrics) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
         logoSong.updateLyrics(lyrics);
-        logoSong.updateMusicStatus(MusicGenerationStatus.PENDING);
+        // 가사만 생성/재생성 시에는 음악 생성 워크플로우를 시작하지 않으므로 상태를 변경하지 않음(또는 null로 클리어)
+        logoSong.updateMusicStatus(null);
         LogoSong saved = logoSongRepository.save(logoSong);
         return LogoSongResponse.from(saved);
     }
 
     @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
     public LogoSongResponse updateVideoGuidelineOnly(Long logoSongId, String videoGuideline) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -126,6 +134,7 @@ public class LogoSongService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "logosong:byId", key = "#id", sync = true)
     public LogoSongResponse getLogoSong(Long id) {
         LogoSong logoSong = logoSongRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -134,6 +143,7 @@ public class LogoSongService {
     }
 
     @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
     public LogoSongResponse incrementViewCount(Long id) {
         LogoSong logoSong = logoSongRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -145,6 +155,7 @@ public class LogoSongService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "logosong:list", key = "#pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort", sync = true)
     public PagedResponse<LogoSongResponse> getAllLogoSongs(Pageable pageable) {
         Page<LogoSong> logoSongPage = logoSongRepository.findAll(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(LogoSongResponse::from);
@@ -158,6 +169,7 @@ public class LogoSongService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "logosong:popular", key = "#pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort", sync = true)
     public PagedResponse<LogoSongResponse> getPopularLogoSongs(Pageable pageable) {
         Page<LogoSong> logoSongPage = logoSongRepository.findByOrderByLikeCountDesc(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(LogoSongResponse::from);
@@ -171,6 +183,7 @@ public class LogoSongService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "logosong:list", key = "'u:' + #userId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort", sync = true)
     public PagedResponse<LogoSongResponse> getAllLogoSongs(Pageable pageable, Long userId) {
         Page<LogoSong> logoSongPage = logoSongRepository.findAll(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(logoSong -> {
@@ -190,6 +203,7 @@ public class LogoSongService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "logosong:popular", key = "'u:' + #userId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort", sync = true)
     public PagedResponse<LogoSongResponse> getPopularLogoSongs(Pageable pageable, Long userId) {
         Page<LogoSong> logoSongPage = logoSongRepository.findByOrderByLikeCountDesc(pageable);
         Page<LogoSongResponse> responsePage = logoSongPage.map(logoSong -> {
@@ -220,6 +234,24 @@ public class LogoSongService {
     }
 
     @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
+    public LogoSongResponse incrementViewCountWithLike(Long id, Long userId) {
+        LogoSong logoSong = logoSongRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+
+        logoSong.incrementViewCount();
+        LogoSong savedLogoSong = logoSongRepository.save(logoSong);
+
+        boolean liked = false;
+        if (userId != null) {
+            liked = logoSongLikeRepository.existsByUserIdAndLogosongId(userId, id);
+        }
+
+        return LogoSongResponse.from(savedLogoSong, liked);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
     public void toggleLike(Long logoSongId, Long userId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));

@@ -229,7 +229,7 @@ class LogoSongControllerTest {
     void getMusicGenerationStatus_RealAPI() {
         // When
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                baseUrl + "/api/v1/logosongs/1/generation-status",
+                baseUrl + "/api/v1/logosongs/1/status",
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<Map<String, Object>>() {}
@@ -252,7 +252,7 @@ class LogoSongControllerTest {
     void getPollingStatus_RealAPI() {
         // When
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                baseUrl + "/api/v1/logosongs/1/polling-status",
+                baseUrl + "/api/v1/logosongs/1/status",
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<Map<String, Object>>() {}
@@ -275,7 +275,7 @@ class LogoSongControllerTest {
     void getQuickStatus_RealAPI() {
         // When
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                baseUrl + "/api/v1/logosongs/1/quick-status",
+                baseUrl + "/api/v1/logosongs/1/status",
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<Map<String, Object>>() {}

@@ -8,6 +8,7 @@ import com.guineafigma.global.exception.BusinessException;
 import com.guineafigma.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class MusicGenerationPollingService {
 
     // 웹 클라이언트 폴링을 위한 최적화된 상태 확인
     @Transactional
+    @Cacheable(value = "suno:status", key = "#logoSongId", sync = true)
     public MusicGenerationStatusResponse getPollingStatus(Long logoSongId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -37,10 +39,11 @@ public class MusicGenerationPollingService {
                         logoSong.getId(),
                         logoSong.getSunoTaskId(),
                         logoSong.getGeneratedMusicUrl(),
-                        null, // 비디오 URL은 현재 미지원
-                        null, // duration은 현재 미지원
-                        logoSong.getCreatedAt(), // 시작 시간 대용
-                        logoSong.getGeneratedAt()
+                        null,
+                        null,
+                        logoSong.getCreatedAt(),
+                        logoSong.getGeneratedAt(),
+                        logoSong.getImageUrl()
                 );
             }
             
@@ -49,12 +52,13 @@ public class MusicGenerationPollingService {
                         logoSong.getId(),
                         logoSong.getSunoTaskId(),
                         "음악 생성에 실패했습니다.",
-                        logoSong.getCreatedAt()
+                        logoSong.getCreatedAt(),
+                        logoSong.getImageUrl()
                 );
             }
             
             if (currentStatus == MusicGenerationStatus.PENDING) {
-                return MusicGenerationStatusResponse.pending(logoSong.getId());
+                return MusicGenerationStatusResponse.pending(logoSong.getId(), logoSong.getImageUrl());
             }
             
             // 3. PROCESSING 상태인 경우 Suno API 확인
@@ -85,18 +89,21 @@ public class MusicGenerationPollingService {
                                 result.getVideoUrl(),
                                 result.getDuration(),
                                 logoSong.getCreatedAt(),
-                                LocalDateTime.now()
+                                LocalDateTime.now(),
+                                logoSong.getImageUrl()
                         );
                         case FAILED -> MusicGenerationStatusResponse.failed(
                                 logoSong.getId(),
                                 logoSong.getSunoTaskId(),
                                 result.getErrorMessage(),
-                                logoSong.getCreatedAt()
+                                logoSong.getCreatedAt(),
+                                logoSong.getImageUrl()
                         );
                         default -> MusicGenerationStatusResponse.processing(
                                 logoSong.getId(),
                                 logoSong.getSunoTaskId(),
-                                logoSong.getCreatedAt()
+                                logoSong.getCreatedAt(),
+                                logoSong.getImageUrl()
                         );
                     };
                     
@@ -106,7 +113,8 @@ public class MusicGenerationPollingService {
                     return MusicGenerationStatusResponse.processing(
                             logoSong.getId(),
                             logoSong.getSunoTaskId(),
-                            logoSong.getCreatedAt()
+                            logoSong.getCreatedAt(),
+                            logoSong.getImageUrl()
                     );
                 }
             }
@@ -115,7 +123,8 @@ public class MusicGenerationPollingService {
             return MusicGenerationStatusResponse.processing(
                     logoSong.getId(),
                     logoSong.getSunoTaskId(),
-                    logoSong.getCreatedAt()
+                    logoSong.getCreatedAt(),
+                    logoSong.getImageUrl()
             );
             
         } catch (BusinessException e) {
@@ -128,6 +137,7 @@ public class MusicGenerationPollingService {
 
     // 폴링 상태 확인 (간단 버전)
     @Transactional(readOnly = true)
+    @Cacheable(value = "logosong:quickStatus", key = "#logoSongId", sync = true)
     public MusicGenerationStatusResponse getQuickPollingStatus(Long logoSongId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
@@ -141,19 +151,22 @@ public class MusicGenerationPollingService {
                     null,
                     null,
                     logoSong.getCreatedAt(),
-                    logoSong.getGeneratedAt()
+                    logoSong.getGeneratedAt(),
+                    logoSong.getImageUrl()
             );
             case FAILED -> MusicGenerationStatusResponse.failed(
                     logoSong.getId(),
                     logoSong.getSunoTaskId(),
                     "음악 생성에 실패했습니다.",
-                    logoSong.getCreatedAt()
+                    logoSong.getCreatedAt(),
+                    logoSong.getImageUrl()
             );
-            case PENDING -> MusicGenerationStatusResponse.pending(logoSong.getId());
+            case PENDING -> MusicGenerationStatusResponse.pending(logoSong.getId(), logoSong.getImageUrl());
             default -> MusicGenerationStatusResponse.processing(
                     logoSong.getId(),
                     logoSong.getSunoTaskId(),
-                    logoSong.getCreatedAt()
+                    logoSong.getCreatedAt(),
+                    logoSong.getImageUrl()
             );
         };
     }

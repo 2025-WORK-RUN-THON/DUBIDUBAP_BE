@@ -122,7 +122,7 @@ class LogoSongAsyncFlowTest {
     void asyncFlow_Step3_MusicGenerationCompleted_RealAPI() {
         // When
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                baseUrl + "/api/v1/logosongs/1/generation-status",
+                baseUrl + "/api/v1/logosongs/1/status",
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<Map<String, Object>>() {}
@@ -171,7 +171,7 @@ class LogoSongAsyncFlowTest {
     void asyncFlow_Step5_ButtonStateSimulation_RealAPI() {
         // When
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                baseUrl + "/api/v1/logosongs/1/polling-status",
+                baseUrl + "/api/v1/logosongs/1/status",
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<Map<String, Object>>() {}

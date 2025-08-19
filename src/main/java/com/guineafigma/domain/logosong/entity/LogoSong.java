@@ -21,9 +21,6 @@ public class LogoSong extends BaseEntity {
     @Column(name = "image_url")
     private String imageUrl;
 
-    @Column(name = "logosong_url")
-    private String logosongUrl;
-
     @Column(name = "service_name", nullable = false)
     @NotNull
     private String serviceName;

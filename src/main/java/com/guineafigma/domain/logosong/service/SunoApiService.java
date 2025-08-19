@@ -13,6 +13,7 @@ import com.guineafigma.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -87,6 +88,7 @@ public class SunoApiService {
         }
     }
 
+    @Cacheable(value = "suno:status", key = "#taskId", sync = true)
     public MusicGenerationResult checkMusicStatus(String taskId) {
         try {
             // 1) 우선 record-info로 상세 조회 (문서 권장)
