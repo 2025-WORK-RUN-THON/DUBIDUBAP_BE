@@ -1,0 +1,63 @@
+# 테스트 환경 설정
+spring:
+  # 데이터베이스 설정 (H2 인메모리)
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  
+  # H2 콘솔 비활성화 (테스트용)
+  h2:
+    console:
+      enabled: false
+  
+  # AWS 설정 비활성화
+  cloud:
+    aws:
+      stack:
+        auto: false
+      region:
+        auto: false
+
+# AWS S3 Mock 설정
+cloud:
+  aws:
+    region:
+      static: ap-northeast-2
+    s3:
+      bucket: test-bucket
+    credentials:
+      access-key: test-key
+      secret-key: test-secret
+
+# JWT 설정 (테스트용)
+jwt:
+  secret-key: test-jwt-secret-key-for-testing-purposes-only
+
+# 로깅 레벨 (테스트용)
+logging:
+  level:
+    com.guineafigma: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type: TRACE
+    root: INFO
+
+# 테스트 전용 설정
+test:
+  mock:
+    openai: true
+    suno: true
+    s3: true
