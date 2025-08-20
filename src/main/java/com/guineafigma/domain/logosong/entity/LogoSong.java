@@ -58,6 +58,9 @@ public class LogoSong extends BaseEntity {
     @Column(name = "additional_info", columnDefinition = "TEXT")
     private String additionalInfo;
 
+    @Column(name = "introduction", columnDefinition = "TEXT")
+    private String introduction;
+
     @Column(name = "like_count")
     @Builder.Default
     private Integer likeCount = 0;
@@ -122,6 +125,10 @@ public class LogoSong extends BaseEntity {
 
     public void updateVideoGuideline(String videoGuideline) {
         this.videoGuideline = videoGuideline;
+    }
+
+    public void updateIntroduction(String introduction) {
+        this.introduction = introduction;
     }
 
     public void updateSunoTaskId(String sunoTaskId) {

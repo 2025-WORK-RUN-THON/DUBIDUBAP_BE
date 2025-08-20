@@ -53,6 +53,9 @@ public class LogoSongResponse {
     @Schema(description = "기타 추가 요청사항", example = "담밀죽이 대표 메뉴이고, 오래된 전통을 자랑하는 마을 카페", required = false, nullable = true)
     private String additionalInfo;
 
+    @Schema(description = "전시 소개글", example = "우리 브랜드는 지역과 함께 자라는 따뜻한 동네 카페입니다.", required = false, nullable = true)
+    private String introduction;
+
     @Schema(description = "사용자들의 좋아요 개수", example = "42", required = true, nullable = false)
     private Integer likeCount;
 
@@ -106,6 +109,7 @@ public class LogoSongResponse {
                 .musicGenre(logoSong.getMusicGenre())
                 .version(logoSong.getVersion())
                 .additionalInfo(logoSong.getAdditionalInfo())
+                .introduction(logoSong.getIntroduction())
                 .likeCount(logoSong.getLikeCount())
                 .viewCount(logoSong.getViewCount())
                 .lyrics(logoSong.getLyrics())

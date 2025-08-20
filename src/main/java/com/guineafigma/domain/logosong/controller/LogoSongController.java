@@ -178,18 +178,19 @@ public class LogoSongController {
 
     @PostMapping("/{id}/visibility")
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "로고송 공개 여부 변경", description = "본인 로고송의 공개 여부를 변경합니다. 기본값은 비공개(false)입니다.")
+    @Operation(summary = "로고송 공개 여부/소개글 변경", description = "본인 로고송의 공개 여부를 변경하고, 선택적으로 전시 소개글(introduction)을 함께 저장합니다. 공개 여부 기본값은 비공개(false)입니다.")
     @ApiSuccessResponse(message = "공개 여부가 성공적으로 변경되었습니다.")
     public ApiResponse<Void> updateVisibility(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
             @Parameter(description = "공개 여부", required = true) @RequestParam("public") boolean publicVisible,
+            @Parameter(description = "전시 소개글(선택)") @RequestParam(value = "introduction", required = false) String introduction,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         // 사용자 소유 검증 로직은 추후 userId가 모델에 포함될 때 강화 가능
         Long userId = userPrincipal != null ? userPrincipal.getId() : null;
         if (userId == null) {
             return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-        logoSongService.updateVisibility(id, publicVisible, userId);
+        logoSongService.updateVisibility(id, publicVisible, introduction, userId);
         return ApiResponse.success();
     }
 

@@ -354,10 +354,13 @@ public class LogoSongService {
 
     @Transactional
     @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
-    public void updateVisibility(Long logoSongId, boolean publicVisible, Long userId) {
+    public void updateVisibility(Long logoSongId, boolean publicVisible, String introduction, Long userId) {
         LogoSong logoSong = logoSongRepository.findByIdAndUser_Id(logoSongId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
         logoSong.setVisibility(publicVisible);
+        if (introduction != null) {
+            logoSong.updateIntroduction(introduction);
+        }
         logoSongRepository.save(logoSong);
     }
 
