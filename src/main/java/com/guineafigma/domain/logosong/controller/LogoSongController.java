@@ -130,7 +130,7 @@ public class LogoSongController {
         return ApiResponse.success(response);
     }
 
-    @PostMapping("/guides")
+    @PostMapping("/lyrics")
     @ResponseStatus(HttpStatus.CREATED)
     @SecurityRequirement(name = "JWT")
     @Operation(
@@ -162,26 +162,20 @@ public class LogoSongController {
 
     @PutMapping("/{id}/like")
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "로고송 좋아요 설정", description = "좋아요 버튼. true=좋아요, false=해제")
-    @ApiSuccessResponse(message = "좋아요 상태가 성공적으로 설정되었습니다.")
+    @Operation(summary = "로고송 좋아요 토글", description = "로고송의 좋아요 상태를 토글합니다. 이미 좋아요한 상태라면 취소하고, 좋아요하지 않은 상태라면 추가합니다.")
+    @ApiSuccessResponse(message = "좋아요 상태가 성공적으로 토글되었습니다.")
     @ApiErrorExamples({
             ErrorCode.AUTHENTICATION_REQUIRED,
-            ErrorCode.INVALID_TOKEN,
             ErrorCode.LOGOSONG_NOT_FOUND,
             ErrorCode.USER_NOT_FOUND
     })
     public ApiResponse<Void> setLike(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
-            @RequestParam("like") boolean like,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         if (userPrincipal == null) {
             return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-        if (like) {
-            logoSongService.like(id, userPrincipal.getId());
-        } else {
-            logoSongService.unlike(id, userPrincipal.getId());
-        }
+        logoSongService.toggleLike(id, userPrincipal.getId());
         return ApiResponse.success();
     }
 

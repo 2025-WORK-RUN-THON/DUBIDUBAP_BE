@@ -2,6 +2,8 @@ package com.guineafigma.domain.logosong.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.guineafigma.domain.logosong.client.FastApiClient;
+import com.guineafigma.domain.logosong.dto.fastapi.GenerateResponseDto;
 import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
 import com.guineafigma.domain.logosong.dto.response.GuidesResponse;
 import com.guineafigma.domain.logosong.entity.LogoSong;
@@ -26,6 +28,7 @@ public class LogoSongLyricsService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final FastApiClient fastApiClient;
 
     @Value("${openai.api.key}")
     private String openaiApiKey;
@@ -39,7 +42,29 @@ public class LogoSongLyricsService {
     public GuidesResponse generateLyricsAndVideoGuide(LogoSongCreateRequest request) {
         try {
             log.info("OpenAI API 호출 시작 - 모델: {}, API URL: {}", openaiModel, openaiApiUrl);
-            String masterPrompt = buildAdvancedPrompt(request);
+            // 1) FastAPI에서 분석/프롬프트 수신 (실패 시 내부 프롬프트로 폴백)
+            String masterPrompt;
+            try {
+                String requestId = java.util.UUID.randomUUID().toString();
+                GenerateResponseDto gen = fastApiClient.fetchGenerate(request, requestId);
+                if (gen != null && gen.getMaster_prompt() != null && !gen.getMaster_prompt().isBlank()) {
+                    // FastAPI 응답 요약 로깅
+                    try {
+                        int examplesCount = gen.getExamples() != null ? gen.getExamples().size() : 0;
+                        var ms = gen.getAnalysis() != null ? gen.getAnalysis().getMusicSummary() : null;
+                        log.info("FastAPI 응답 반영(lyrics+guide): requestId={}, examples={}, bpm={}, key={}, mode={}",
+                                gen.getRequestId(), examplesCount,
+                                (ms != null ? ms.getBpm() : null), (ms != null ? ms.getKey() : null), (ms != null ? ms.getMode() : null));
+                    } catch (Exception ignore) {}
+                    masterPrompt = gen.getMaster_prompt()
+                            + "\n\n출력 형식: JSON. keys: lyrics (string), video_guideline (string). Only output JSON.";
+                } else {
+                    masterPrompt = buildAdvancedPrompt(request);
+                }
+            } catch (Exception e) {
+                log.warn("FastAPI /generate 연동 실패, 내부 프롬프트로 폴백: {}", e.getMessage());
+                masterPrompt = buildAdvancedPrompt(request);
+            }
 
             String content = callOpenAI(masterPrompt, openaiModel);
             log.info("OpenAI API 호출 성공");
@@ -76,7 +101,27 @@ public class LogoSongLyricsService {
     public String generateLyricsOnly(LogoSongCreateRequest request) {
         try {
             log.info("OpenAI API 호출 시작(가사만) - 모델: {}, API URL: {}", openaiModel, openaiApiUrl);
-            String prompt = buildLyricsOnlyPrompt(request);
+            // 1) FastAPI에서 분석/프롬프트 수신 (실패 시 내부 프롬프트로 폴백)
+            String prompt;
+            try {
+                String requestId = java.util.UUID.randomUUID().toString();
+                GenerateResponseDto gen = fastApiClient.fetchGenerate(request, requestId);
+                if (gen != null && gen.getMaster_prompt() != null && !gen.getMaster_prompt().isBlank()) {
+                    try {
+                        int examplesCount = gen.getExamples() != null ? gen.getExamples().size() : 0;
+                        var ms = gen.getAnalysis() != null ? gen.getAnalysis().getMusicSummary() : null;
+                        log.info("FastAPI 응답 반영(lyrics-only): requestId={}, examples={}, bpm={}, key={}, mode={}",
+                                gen.getRequestId(), examplesCount,
+                                (ms != null ? ms.getBpm() : null), (ms != null ? ms.getKey() : null), (ms != null ? ms.getMode() : null));
+                    } catch (Exception ignore) {}
+                    prompt = gen.getMaster_prompt() + "\n\n출력 형식: JSON. keys: lyrics (string). Only output JSON.";
+                } else {
+                    prompt = buildLyricsOnlyPrompt(request);
+                }
+            } catch (Exception e) {
+                log.warn("FastAPI /generate 연동 실패(가사만), 내부 프롬프트로 폴백: {}", e.getMessage());
+                prompt = buildLyricsOnlyPrompt(request);
+            }
             String content = callOpenAI(prompt, openaiModel);
             log.info("OpenAI API 호출 성공(가사만)");
 

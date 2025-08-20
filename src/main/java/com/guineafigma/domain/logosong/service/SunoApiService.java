@@ -2,6 +2,9 @@ package com.guineafigma.domain.logosong.service;
 
 import com.guineafigma.common.enums.MusicGenerationStatus;
 import com.guineafigma.domain.logosong.client.SunoApiClient;
+import com.guineafigma.domain.logosong.client.FastApiClient;
+import com.guineafigma.domain.logosong.dto.fastapi.GenerateResponseDto;
+import com.guineafigma.domain.logosong.dto.request.LogoSongCreateRequest;
 import com.guineafigma.domain.logosong.dto.request.SunoGenerateRequest;
 import com.guineafigma.domain.logosong.dto.response.MusicGenerationResult;
 import com.guineafigma.domain.logosong.dto.response.SunoGenerateResponse;
@@ -19,7 +22,6 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,8 @@ public class SunoApiService {
 
     private final SunoApiClient sunoApiClient;
     private final LogoSongRepository logoSongRepository;
+    private final FastApiClient fastApiClient;
+    private final SunoParamMapper sunoParamMapper;
 
     @Value("${app.domain:http://localhost:8080}")
     private String appDomain;
@@ -39,7 +43,6 @@ public class SunoApiService {
     @Transactional
     public String generateMusic(LogoSong logoSong) {
         if (logoSong.getMusicStatus() == MusicGenerationStatus.PROCESSING) {
-            // 이미 진행 중이면 기존 taskId를 그대로 반환하여 멱등성 보장
             if (logoSong.getSunoTaskId() != null) {
                 log.info("이미 진행 중인 Suno 작업 재사용: logoSongId={}, taskId={}", logoSong.getId(), logoSong.getSunoTaskId());
                 return logoSong.getSunoTaskId();
@@ -48,32 +51,76 @@ public class SunoApiService {
         }
 
         try {
-            // 1. 프롬프트 구성
             String prompt = logoSong.getLyrics();
             String style = logoSong.getMusicGenre();
             String title = logoSong.getServiceName() + " - Logo Song (" + logoSong.getVersion().getDisplayName() + ")";
-            String model = "V3_5"; // 기본 모델
-
-            // 2. 콜백 URL 설정 (더미 URL 사용 - 폴링 방식으로 상태 확인)
+            String model = "V3_5";
             String callBackUrl = "https://dummy-callback.com";
-
-            // 3. VersionType에 따른 duration 설정
             Integer duration = getVersionDurationSeconds(logoSong.getVersion());
 
             log.info("Suno API 음악 생성 시작: logoSongId={}, title={}, duration={}초", logoSong.getId(), title, duration);
 
-            // 4. Suno API 요청 생성 (duration 포함)
-            SunoGenerateRequest request = SunoGenerateRequest.of(prompt, style, title, model, callBackUrl, duration);
+            SunoGenerateRequest request;
+            try {
+                String requestId = java.util.UUID.randomUUID().toString();
+                LogoSongCreateRequest genReq = LogoSongCreateRequest.builder()
+                        .serviceName(logoSong.getServiceName())
+                        .slogan(logoSong.getSlogan())
+                        .industry(logoSong.getIndustry())
+                        .marketingItem(logoSong.getMarketingItem())
+                        .targetCustomer(logoSong.getTargetCustomer())
+                        .moodTone(logoSong.getMoodTone())
+                        .musicGenre(logoSong.getMusicGenre())
+                        .version(logoSong.getVersion())
+                        .additionalInfo(logoSong.getAdditionalInfo())
+                        .build();
+                GenerateResponseDto gen = fastApiClient.fetchGenerate(genReq, requestId);
+                try {
+                    if (gen != null) {
+                        int examplesCount = gen.getExamples() != null ? gen.getExamples().size() : 0;
+                        var ms = gen.getAnalysis() != null ? gen.getAnalysis().getMusicSummary() : null;
+                        var baseLog = (gen.getSunoRequestBase() != null ? gen.getSunoRequestBase() : gen.getSuno_request());
+                        Double sw = baseLog != null ? baseLog.getStyleWeight() : null;
+                        Double ww = baseLog != null ? baseLog.getWeirdnessConstraint() : null;
+                        Double aw = baseLog != null ? baseLog.getAudioWeight() : null;
+                        log.info("FastAPI 응답 반영(Suno tuning): requestId={}, examples={}, bpm={}, key={}, mode={}, baseWeights(style={}, weirdness={}, audio={})",
+                                gen.getRequestId(), examplesCount,
+                                (ms != null ? ms.getBpm() : null), (ms != null ? ms.getKey() : null), (ms != null ? ms.getMode() : null),
+                                sw, ww, aw);
+                    }
+                } catch (Exception ignore) {}
+                GenerateResponseDto.SunoRequestBase base = (gen != null)
+                        ? (gen.getSunoRequestBase() != null ? gen.getSunoRequestBase() : gen.getSuno_request())
+                        : null;
+                request = sunoParamMapper.tuneFromAnalysis(base, gen != null ? gen.getAnalysis() : null, prompt, style, title, duration);
+                if (request.getCallBackUrl() == null) {
+                    request = SunoGenerateRequest.builder()
+                            .customMode(true)
+                            .instrumental(request.getInstrumental() != null ? request.getInstrumental() : false)
+                            .model(request.getModel() != null ? request.getModel() : model)
+                            .callBackUrl(callBackUrl)
+                            .prompt(request.getPrompt())
+                            .style(request.getStyle() != null ? request.getStyle() : style)
+                            .title(request.getTitle() != null ? request.getTitle() : title)
+                            .negativeTags(request.getNegativeTags())
+                            .vocalGender(request.getVocalGender())
+                            .styleWeight(request.getStyleWeight())
+                            .weirdnessConstraint(request.getWeirdnessConstraint())
+                            .audioWeight(request.getAudioWeight())
+                            .duration(request.getDuration() != null ? request.getDuration() : duration)
+                            .build();
+                }
+            } catch (Exception e) {
+                log.warn("FastAPI 분석 기반 튜닝 실패, 기본 파라미터 사용: {}", e.getMessage());
+                request = SunoGenerateRequest.of(prompt, style, title, model, callBackUrl, duration);
+            }
 
-            // 5. Suno API 호출
             SunoGenerateResponse response = sunoApiClient.generateMusic(request);
-            
+
             if (response.getId() != null) {
-                // LogoSong 상태 업데이트
                 logoSong.updateSunoTaskId(response.getId());
                 logoSong.updateMusicStatus(MusicGenerationStatus.PROCESSING);
                 logoSongRepository.save(logoSong);
-                
                 log.info("Suno API 음악 생성 요청 성공: logoSongId={}, taskId={}, duration={}초", logoSong.getId(), response.getId(), duration);
                 return response.getId();
             } else {
@@ -94,7 +141,6 @@ public class SunoApiService {
     @Cacheable(value = "suno:status", key = "#taskId", sync = true)
     public MusicGenerationResult checkMusicStatus(String taskId) {
         try {
-            // 1) 우선 record-info로 상세 조회 (문서 권장)
             var recordInfo = sunoApiClient.getGenerateRecordInfo(taskId);
             if (recordInfo.getCode() != null && recordInfo.getCode() == 200 && recordInfo.getData() != null) {
                 String status = recordInfo.getData().getStatus();
@@ -123,7 +169,6 @@ public class SunoApiService {
                         .build();
             }
 
-            // 2) 폴백: 기존 get API
             SunoStatusResponse response = sunoApiClient.getGenerationStatus(taskId);
             return MusicGenerationResult.fromSunoStatus(response);
         } catch (BusinessException e) {
@@ -140,159 +185,20 @@ public class SunoApiService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.SUNO_TASK_NOT_FOUND));
 
             logoSong.updateMusicStatus(result.getStatus());
-            
+
             if (result.getStatus() == MusicGenerationStatus.COMPLETED) {
                 logoSong.updateGeneratedMusicUrl(result.getAudioUrl());
-                log.info("음악 생성 완료: logoSongId={}, taskId={}, audioUrl={}", 
+                log.info("음악 생성 완료: logoSongId={}, taskId={}, audioUrl={}",
                         logoSong.getId(), taskId, result.getAudioUrl());
             } else if (result.getStatus() == MusicGenerationStatus.FAILED) {
-                log.error("음악 생성 실패: logoSongId={}, taskId={}, error={}", 
+                log.error("음악 생성 실패: logoSongId={}, taskId={}, error={}",
                         logoSong.getId(), taskId, result.getErrorMessage());
             }
-            
+
             logoSongRepository.save(logoSong);
         } catch (Exception e) {
             log.error("음악 생성 콜백 처리 중 예외 발생: taskId={}", taskId, e);
         }
-    }
-
-    // 고급 프롬프트 엔지니어링 기법을 적용한 음악 생성 프롬프트 구축
-    private String buildAdvancedMusicPrompt(LogoSong logoSong) {
-        StringBuilder prompt = new StringBuilder();
-
-        // Chain-of-Thought 프롬프트 엔지니어링
-        prompt.append("Create a professional brand jingle with the following specifications:\n\n");
-
-        // 브랜드 정보 구조화
-        prompt.append("BRAND IDENTITY:\n");
-        prompt.append("- Service: ").append(logoSong.getServiceName()).append("\n");
-        if (logoSong.getSlogan() != null && !logoSong.getSlogan().isEmpty()) {
-            prompt.append("- Slogan: ").append(logoSong.getSlogan()).append("\n");
-        }
-        if (logoSong.getIndustry() != null && !logoSong.getIndustry().isEmpty()) {
-            prompt.append("- Industry: ").append(logoSong.getIndustry()).append("\n");
-        }
-        if (logoSong.getTargetCustomer() != null && !logoSong.getTargetCustomer().isEmpty()) {
-            prompt.append("- Target: ").append(logoSong.getTargetCustomer()).append("\n");
-        }
-
-        // 음악적 특성 정의
-        prompt.append("\nMUSICAL REQUIREMENTS:\n");
-        prompt.append("- Genre: ").append(logoSong.getMusicGenre()).append("\n");
-        prompt.append("- Mood: ").append(logoSong.getMoodTone() != null ? logoSong.getMoodTone() : "upbeat and memorable").append("\n");
-        prompt.append("- BPM: ").append(calculateBPM(logoSong.getMusicGenre())).append("\n");
-        prompt.append("- Key: ").append(suggestKey(logoSong.getMoodTone())).append("\n");
-
-        // 가사 통합 (Few-Shot Learning 적용)
-        if (logoSong.getLyrics() != null && !logoSong.getLyrics().isEmpty()) {
-            prompt.append("\nLYRICS:\n");
-            prompt.append(logoSong.getLyrics()).append("\n");
-        }
-
-        // 제약사항 및 품질 기준
-        prompt.append("\nCONSTRAINTS:\n");
-        prompt.append("- Must repeat service name '").append(logoSong.getServiceName()).append("' at least 2 times\n");
-        prompt.append("- Commercial quality production\n");
-        prompt.append("- Memorable and catchy melody\n");
-        prompt.append("- Clear vocal delivery\n");
-        prompt.append("- Professional mixing and mastering\n");
-
-        // 장르별 특화 지시사항
-        prompt.append("\nSTYLE DIRECTION:\n");
-        prompt.append(getGenreSpecificDirection(logoSong.getMusicGenre()));
-
-        return prompt.toString();
-    }
-
-    private String buildMusicTags(LogoSong logoSong) {
-        StringBuilder tags = new StringBuilder();
-        
-        // 기본 장르 태그
-        tags.append(String.valueOf(logoSong.getMusicGenre()).toLowerCase());
-        
-        // 무드 태그 추가
-        if (logoSong.getMoodTone() != null && !logoSong.getMoodTone().isEmpty()) {
-            tags.append(", ").append(logoSong.getMoodTone().toLowerCase());
-        }
-        
-        // 브랜드 징글 특화 태그
-        tags.append(", commercial, jingle, brand music, memorable");
-        
-        // 업종별 태그 추가
-        if (logoSong.getIndustry() != null && !logoSong.getIndustry().isEmpty()) {
-            tags.append(", ").append(logoSong.getIndustry().toLowerCase());
-        }
-        
-        // 버전별 태그
-        tags.append(", ").append(logoSong.getVersion().toString().toLowerCase());
-        
-        return tags.toString();
-    }
-
-    private String buildMusicTitle(LogoSong logoSong) {
-        return logoSong.getServiceName() + " - Logo Song (" + logoSong.getVersion() + ")";
-    }
-
-    private String selectOptimalModel(LogoSong logoSong) {
-        // 버전과 장르에 따른 최적 모델 선택
-        String version = logoSong.getVersion().toString();
-        String genre = String.valueOf(logoSong.getMusicGenre()).toUpperCase();
-        
-        // 고품질이 필요한 경우 V4 사용
-        if ("LONG".equals(version) || "JAZZ".equals(genre) || "CLASSICAL".equals(genre)) {
-            return "V4";
-        }
-        
-        // 일반적인 경우 V3_5 사용 (비용 효율적)
-        return "V3_5";
-    }
-
-
-
-    private int calculateBPM(Object genre) {
-        if (genre == null) return 120;
-        String genreStr = genre.toString().toUpperCase();
-        return switch (genreStr) {
-            case "ELECTRONIC", "DANCE" -> 128;
-            case "ROCK", "POP" -> 120;
-            case "JAZZ" -> 100;
-            case "BALLAD" -> 80;
-            case "HIP_HOP" -> 90;
-            case "CLASSICAL" -> 60;
-            default -> 120;
-        };
-    }
-
-    private String suggestKey(String moodTone) {
-        if (moodTone == null) return "C Major";
-        String mood = moodTone.toLowerCase();
-        if (mood.contains("밝") || mood.contains("긍정") || mood.contains("활기")) {
-            return "C Major";
-        } else if (mood.contains("따뜻") || mood.contains("부드")) {
-            return "F Major";
-        } else if (mood.contains("고급") || mood.contains("세련")) {
-            return "G Major";
-        } else if (mood.contains("차분") || mood.contains("안정")) {
-            return "D Major";
-        }
-        return "C Major";
-    }
-
-    private String getGenreSpecificDirection(Object genre) {
-        if (genre == null) return "Create a modern, versatile commercial jingle";
-        
-        String genreStr = genre.toString().toUpperCase();
-        return switch (genreStr) {
-            case "POP" -> "Modern pop production with catchy hooks, clear vocals, and radio-friendly mix";
-            case "ROCK" -> "Energetic rock with driving rhythm, electric guitars, and powerful vocals";
-            case "ELECTRONIC" -> "Clean electronic production with synthesizers, clear beats, and modern sound design";
-            case "JAZZ" -> "Smooth jazz arrangement with live instruments feel, sophisticated harmony";
-            case "BALLAD" -> "Emotional ballad with piano/strings, intimate vocal delivery, slower tempo";
-            case "HIP_HOP" -> "Modern hip-hop beat with clear vocals, rhythmic delivery, urban feel";
-            case "CLASSICAL" -> "Orchestral arrangement with traditional instruments, elegant composition";
-            case "DANCE" -> "Upbeat dance track with electronic elements, energetic rhythm, club-ready sound";
-            default -> "Create a modern, versatile commercial jingle with professional production quality";
-        };
     }
 
     private Integer getVersionDurationSeconds(Object version) {

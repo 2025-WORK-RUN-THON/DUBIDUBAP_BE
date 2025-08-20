@@ -326,6 +326,13 @@ public class LogoSongService {
     public void toggleLike(Long logoSongId, Long userId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        
+        // 비공개 로고송은 소유자만 좋아요 가능. 그 외에는 존재를 숨긴다(404)
+        if (!Boolean.TRUE.equals(logoSong.getIsPublic())) {
+            if (userId == null || !logoSong.getUser().getId().equals(userId)) {
+                throw new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND);
+            }
+        }
 
         boolean exists = logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSongId);
         
@@ -352,6 +359,14 @@ public class LogoSongService {
     public void like(Long logoSongId, Long userId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        
+        // 비공개 로고송은 소유자만 좋아요 가능. 그 외에는 존재를 숨긴다(404)
+        if (!Boolean.TRUE.equals(logoSong.getIsPublic())) {
+            if (userId == null || !logoSong.getUser().getId().equals(userId)) {
+                throw new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND);
+            }
+        }
+        
         boolean exists = logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSongId);
         if (exists) {
             return; // 멱등
@@ -370,6 +385,14 @@ public class LogoSongService {
     public void unlike(Long logoSongId, Long userId) {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        
+        // 비공개 로고송은 소유자만 좋아요 해제 가능. 그 외에는 존재를 숨긴다(404)
+        if (!Boolean.TRUE.equals(logoSong.getIsPublic())) {
+            if (userId == null || !logoSong.getUser().getId().equals(userId)) {
+                throw new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND);
+            }
+        }
+        
         logoSongLikeRepository.findByUserIdAndLogosongId(userId, logoSongId)
                 .ifPresent(like -> {
                     logoSongLikeRepository.delete(like);

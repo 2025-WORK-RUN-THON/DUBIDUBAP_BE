@@ -118,6 +118,7 @@ class LogoSongMyEndpointsUserFieldsTest {
                 .serviceName("내 로고송")
                 .musicGenre("POP")
                 .version(com.guineafigma.common.enums.VersionType.SHORT)
+                .isPublic(true)
                 .build();
         logoSongRepository.saveAndFlush(mySong);
 
@@ -147,7 +148,7 @@ class LogoSongMyEndpointsUserFieldsTest {
     void likedList_ShouldContainUserFields() {
         // 다른 사용자의 로고송을 하나 생성하고, 내가 좋아요 추가
         User other = userRepository.save(User.builder()
-                .nickname("otherUser")
+                .nickname("otherUser2")
                 .password(passwordEncoder.encode("password456"))
                 .isActive(true)
                 .build());
@@ -157,6 +158,7 @@ class LogoSongMyEndpointsUserFieldsTest {
                 .serviceName("다른 유저 곡")
                 .musicGenre("POP")
                 .version(com.guineafigma.common.enums.VersionType.SHORT)
+                .isPublic(true)
                 .build();
         otherSong = logoSongRepository.saveAndFlush(otherSong);
 
@@ -167,7 +169,7 @@ class LogoSongMyEndpointsUserFieldsTest {
 
         ResponseEntity<Map<String, Object>> likeResp = restTemplate.exchange(
                 baseUrl + "/api/v1/logosongs/" + otherSong.getId() + "/like",
-                HttpMethod.POST,
+                HttpMethod.PUT,
                 httpEntity,
                 new ParameterizedTypeReference<Map<String, Object>>() {}
         );
@@ -183,15 +185,162 @@ class LogoSongMyEndpointsUserFieldsTest {
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());
         Map<String, Object> body = Objects.requireNonNull(resp.getBody());
+        @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) body.get("data");
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> content = (List<Map<String, Object>>) data.get("content");
         assertFalse(content.isEmpty());
+        Map<String, Object> first = content.get(0);
+        assertEquals(other.getId().intValue(), ((Number) first.get("id")).intValue());
+        assertEquals(other.getId().intValue(), ((Number) first.get("userId")).intValue());
+        assertEquals(other.getNickname(), first.get("userNickname"));
+    }
 
-        // 좋아요 목록 항목 각각에 사용자 필드 포함 확인
-        for (Map<String, Object> item : content) {
-            assertNotNull(item.get("userId"));
-            assertNotNull(item.get("userNickname"));
-        }
+    @Test
+    @DisplayName("좋아요 토글 기능 테스트 - 첫 번째 요청으로 좋아요 추가, 두 번째 요청으로 좋아요 취소")
+    void likeToggle_ShouldWorkCorrectly() {
+        // 다른 사용자의 로고송 생성
+        User other = userRepository.save(User.builder()
+                .nickname("otherUser3")
+                .password(passwordEncoder.encode("password456"))
+                .isActive(true)
+                .build());
+
+        LogoSong otherSong = LogoSong.builder()
+                .user(other)
+                .serviceName("토글 테스트 곡")
+                .musicGenre("POP")
+                .version(com.guineafigma.common.enums.VersionType.SHORT)
+                .isPublic(true)
+                .build();
+        otherSong = logoSongRepository.saveAndFlush(otherSong);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        // 첫 번째 요청: 좋아요 추가
+        ResponseEntity<Map<String, Object>> firstLikeResp = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/" + otherSong.getId() + "/like",
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        assertEquals(HttpStatus.OK, firstLikeResp.getStatusCode());
+
+        // 좋아요 상태 확인
+        boolean isLikedAfterFirst = logoSongLikeRepository.existsByUserIdAndLogosongId(testUserId, otherSong.getId());
+        assertTrue(isLikedAfterFirst, "첫 번째 요청 후 좋아요 상태가 true여야 합니다");
+
+        // 두 번째 요청: 좋아요 취소
+        ResponseEntity<Map<String, Object>> secondLikeResp = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/" + otherSong.getId() + "/like",
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        assertEquals(HttpStatus.OK, secondLikeResp.getStatusCode());
+
+        // 좋아요 취소 상태 확인
+        boolean isLikedAfterSecond = logoSongLikeRepository.existsByUserIdAndLogosongId(testUserId, otherSong.getId());
+        assertFalse(isLikedAfterSecond, "두 번째 요청 후 좋아요 상태가 false여야 합니다");
+
+        // 세 번째 요청: 다시 좋아요 추가
+        ResponseEntity<Map<String, Object>> thirdLikeResp = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/" + otherSong.getId() + "/like",
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        assertEquals(HttpStatus.OK, thirdLikeResp.getStatusCode());
+
+        // 다시 좋아요 상태 확인
+        boolean isLikedAfterThird = logoSongLikeRepository.existsByUserIdAndLogosongId(testUserId, otherSong.getId());
+        assertTrue(isLikedAfterThird, "세 번째 요청 후 좋아요 상태가 true여야 합니다");
+    }
+
+    @Test
+    @DisplayName("좋아요 토글 - 인증 없이 시도")
+    void likeToggle_WithoutAuth_ShouldFail() {
+        // 다른 사용자의 로고송 생성
+        User other = userRepository.save(User.builder()
+                .nickname("otherUser4")
+                .password(passwordEncoder.encode("password456"))
+                .isActive(true)
+                .build());
+
+        LogoSong otherSong = LogoSong.builder()
+                .user(other)
+                .serviceName("인증 테스트 곡")
+                .musicGenre("POP")
+                .version(com.guineafigma.common.enums.VersionType.SHORT)
+                .isPublic(true)
+                .build();
+        otherSong = logoSongRepository.saveAndFlush(otherSong);
+
+        HttpEntity<Void> httpEntity = new HttpEntity<>(new HttpHeaders());
+
+        // 인증 없이 좋아요 토글 시도
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/" + otherSong.getId() + "/like",
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 로고송 ID로 토글 시도")
+    void likeToggle_WithNonExistentSong_ShouldFail() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        // 존재하지 않는 ID로 요청
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/99999/like",
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("비공개 로고송 좋아요 토글 - 소유자가 아닌 경우")
+    void likeToggle_PrivateSong_NonOwner_ShouldFail() {
+        // 다른 사용자의 비공개 로고송 생성
+        User other = userRepository.save(User.builder()
+                .nickname("otherUser5")
+                .password(passwordEncoder.encode("password456"))
+                .isActive(true)
+                .build());
+
+        LogoSong privateSong = LogoSong.builder()
+                .user(other)
+                .serviceName("비공개 테스트 곡")
+                .musicGenre("POP")
+                .version(com.guineafigma.common.enums.VersionType.SHORT)
+                .isPublic(false) // 비공개
+                .build();
+        privateSong = logoSongRepository.saveAndFlush(privateSong);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        // 비공개 로고송에 좋아요 시도 (소유자가 아님)
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                baseUrl + "/api/v1/logosongs/" + privateSong.getId() + "/like",
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 }
 

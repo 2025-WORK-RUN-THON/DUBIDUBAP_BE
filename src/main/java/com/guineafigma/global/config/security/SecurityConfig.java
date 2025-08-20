@@ -51,7 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/logosongs/*/regenerate-video-guide").authenticated()
                         .requestMatchers("/api/v1/logosongs/*/status").authenticated()
                         .requestMatchers("/api/v1/logosongs/*/visibility").authenticated()
-                        .requestMatchers("/api/v1/logosongs/guides").authenticated()
+                        .requestMatchers("/api/v1/logosongs/lyrics").authenticated()
                         .requestMatchers("/api/v1/logosongs/with-generation").authenticated()
                         
                         // 공개 엔드포인트

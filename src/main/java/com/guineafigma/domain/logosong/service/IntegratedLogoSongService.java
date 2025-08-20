@@ -128,7 +128,7 @@ public class IntegratedLogoSongService {
         GuidesResponse guides = logoSongLyricsService.generateLyricsAndVideoGuide(request);
         // 2) DB 업데이트 (짧은 트랜잭션)
         LogoSongResponse updated = logoSongService.updateLyricsAndVideoGuide(
-                logoSongId, guides.getLyrics(), guides.getVideoGuideline(), null);
+                logoSongId, guides.getLyrics(), guides.getVideoGuideline());
         // 3) 음악 재생성 필요 상태로 변경 (짧은 트랜잭션)
         logoSongService.setMusicStatus(logoSongId, MusicGenerationStatus.PENDING);
 
@@ -141,7 +141,7 @@ public class IntegratedLogoSongService {
     public LogoSongResponse regenerateLyricsOnly(Long logoSongId, LogoSongCreateRequest request) {
         String lyrics = logoSongLyricsService.generateLyricsOnly(request);
         LogoSongResponse updated = logoSongService.updateLyricsOnlyAndSetPending(
-                logoSongId, lyrics, null);
+                logoSongId, lyrics);
         log.info("가사 재생성 완료: logoSongId={}", logoSongId);
         return updated;
     }
@@ -152,7 +152,7 @@ public class IntegratedLogoSongService {
         LogoSong logoSong = logoSongRepository.findById(logoSongId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
         String videoGuide = logoSongLyricsService.generateVideoGuideOnly(logoSong);
-        LogoSongResponse updated = logoSongService.updateVideoGuidelineOnly(logoSongId, videoGuide, null);
+        LogoSongResponse updated = logoSongService.updateVideoGuidelineOnly(logoSongId, videoGuide, logoSong.getUserId());
         log.info("비디오 가이드라인 (재)생성 완료: logoSongId={}", logoSongId);
         return updated;
     }

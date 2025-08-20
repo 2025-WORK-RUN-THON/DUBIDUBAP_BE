@@ -39,6 +39,8 @@ class LogoSongServiceCacheTest {
         LogoSongCreateRequest req = TestDataBuilder.createValidLogoSongRequest();
         LogoSongResponse created = logoSongService.createLogoSong(req);
         logoSongId = created.getId();
+        // 캐시/토글 테스트에서 권한 제약을 피하기 위해 공개로 전환
+        logoSongService.updateVisibility(logoSongId, true);
         // 초기화: 호출 카운트 명확히 하기 위해
         Mockito.clearInvocations(logoSongRepository);
     }
