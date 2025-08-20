@@ -11,12 +11,15 @@ import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import lombok.Builder;
 import lombok.Getter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
@@ -121,6 +124,18 @@ public class SwaggerConfig {
                 generateSuccessResponseExample(operation, apiSuccessResponse, actualPath);
             }
 
+            // 페이지네이션 성공 응답 예제 처리
+            ApiPagedSuccessResponse pagedSuccess = handlerMethod.getMethodAnnotation(ApiPagedSuccessResponse.class);
+            if (pagedSuccess != null) {
+                generatePagedSuccessResponseExample(operation, pagedSuccess, actualPath);
+            }
+
+            // 페이지네이션 성공 응답 스키마 처리(예시 없이 DTO 스키마로 구성)
+            ApiPagedSuccessSchema pagedSchema = handlerMethod.getMethodAnnotation(ApiPagedSuccessSchema.class);
+            if (pagedSchema != null) {
+                generatePagedSuccessSchema(operation, pagedSchema, actualPath);
+            }
+
             // 페이지네이션 파라미터 한국어 문서 보강
             enhancePaginationParameters(operation);
 
@@ -205,13 +220,19 @@ public class SwaggerConfig {
                 apiResponse.setContent(new Content());
             }
 
-            // Content와 MediaType 설정
+            // Content와 MediaType 설정 (application/json 및 */* 모두 등록)
             Content content = apiResponse.getContent();
             MediaType mediaType = content.get("application/json");
-            
+            if (mediaType == null) {
+                mediaType = content.get("*/*");
+            }
             if (mediaType == null) {
                 mediaType = new MediaType();
                 content.addMediaType("application/json", mediaType);
+                content.addMediaType("*/*", mediaType);
+            } else {
+                if (content.get("application/json") == null) content.addMediaType("application/json", mediaType);
+                if (content.get("*/*") == null) content.addMediaType("*/*", mediaType);
             }
             if (mediaType.getSchema() == null) {
                 mediaType.setSchema(new ObjectSchema());
@@ -283,8 +304,15 @@ public class SwaggerConfig {
         Content content = apiResponse.getContent();
         MediaType mediaType = content.get("application/json");
         if (mediaType == null) {
+            mediaType = content.get("*/*");
+        }
+        if (mediaType == null) {
             mediaType = new MediaType();
             content.addMediaType("application/json", mediaType);
+            content.addMediaType("*/*", mediaType);
+        } else {
+            if (content.get("application/json") == null) content.addMediaType("application/json", mediaType);
+            if (content.get("*/*") == null) content.addMediaType("*/*", mediaType);
         }
         if (mediaType.getSchema() == null) {
             mediaType.setSchema(new ObjectSchema());
@@ -316,6 +344,121 @@ public class SwaggerConfig {
         example.setValue(successResponse);
 
         examples.put("SUCCESS", example);
+
+        responses.addApiResponse(successKey, apiResponse);
+    }
+
+    // 페이지네이션 성공 응답(200/기타) 생성: data = { content: [...], pagination: {...} }
+    private void generatePagedSuccessResponseExample(Operation operation, ApiPagedSuccessResponse meta, String actualPath) {
+        ApiResponses responses = operation.getResponses();
+
+        String successKey = String.valueOf(meta.httpStatus());
+        ApiResponse apiResponse = responses.get(successKey);
+        if (apiResponse == null) {
+            apiResponse = new ApiResponse();
+            apiResponse.setDescription(meta.message());
+            apiResponse.setContent(new Content());
+        }
+
+        Content content = apiResponse.getContent();
+        MediaType mediaType = content.get("application/json");
+        if (mediaType == null) {
+            mediaType = content.get("*/*");
+        }
+        if (mediaType == null) {
+            mediaType = new MediaType();
+            content.addMediaType("application/json", mediaType);
+            content.addMediaType("*/*", mediaType);
+        } else {
+            if (content.get("application/json") == null) content.addMediaType("application/json", mediaType);
+            if (content.get("*/*") == null) content.addMediaType("*/*", mediaType);
+        }
+        if (mediaType.getSchema() == null) {
+            mediaType.setSchema(new ObjectSchema());
+        }
+
+        Map<String, Example> examples = mediaType.getExamples();
+        if (examples == null) {
+            examples = new HashMap<>();
+            mediaType.setExamples(examples);
+        }
+
+        Map<String, Object> wrapper = new LinkedHashMap<>();
+        wrapper.put("timestamp", "2025-08-19T12:00:00.000000");
+        wrapper.put("status", meta.httpStatus());
+        wrapper.put("code", "SUCCESS");
+        wrapper.put("message", meta.message());
+        wrapper.put("path", actualPath);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("content", tryParseJson(meta.contentExample()));
+        data.put("pagination", tryParseJson(meta.paginationExample()));
+        wrapper.put("data", data);
+
+        Example example = new Example();
+        example.description(meta.message());
+        example.setValue(wrapper);
+        examples.put("SUCCESS_PAGED", example);
+
+        responses.addApiResponse(successKey, apiResponse);
+    }
+
+    private Object tryParseJson(String raw) {
+        if (raw == null || raw.isEmpty()) return raw;
+        try {
+            ObjectMapper om = new ObjectMapper();
+            return om.readValue(raw, Object.class);
+        } catch (JsonProcessingException e) {
+            return raw; // 파싱 실패 시 원문 문자열 유지
+        }
+    }
+
+    // 페이지네이션 성공 응답 스키마(예시 없이) 구성: data = { content: T[], pagination: BasePaginationDto }
+    private void generatePagedSuccessSchema(Operation operation, ApiPagedSuccessSchema meta, String actualPath) {
+        ApiResponses responses = operation.getResponses();
+        String successKey = String.valueOf(meta.httpStatus());
+        ApiResponse apiResponse = responses.get(successKey);
+        if (apiResponse == null) {
+            apiResponse = new ApiResponse();
+            apiResponse.setDescription(meta.message());
+            apiResponse.setContent(new Content());
+        }
+
+        Content content = apiResponse.getContent();
+        MediaType mediaType = content.get("application/json");
+        if (mediaType == null) {
+            mediaType = content.get("*/*");
+        }
+        if (mediaType == null) {
+            mediaType = new MediaType();
+            content.addMediaType("application/json", mediaType);
+            content.addMediaType("*/*", mediaType);
+        } else {
+            if (content.get("application/json") == null) content.addMediaType("application/json", mediaType);
+            if (content.get("*/*") == null) content.addMediaType("*/*", mediaType);
+        }
+
+        // 최상위 래퍼 스키마
+        ObjectSchema root = new ObjectSchema();
+        root.addProperty("timestamp", new Schema<>().type("string"));
+        root.addProperty("status", new Schema<>().type("integer"));
+        root.addProperty("code", new Schema<>().type("string"));
+        root.addProperty("message", new Schema<>().type("string"));
+        root.addProperty("path", new Schema<>().type("string"));
+
+        // data 스키마
+        ObjectSchema data = new ObjectSchema();
+        ArraySchema contentArray = new ArraySchema();
+        // DTO 스키마 참조 설정
+        String contentRef = "#/components/schemas/" + meta.contentClass().getSimpleName();
+        contentArray.setItems(new Schema<>().$ref(contentRef));
+        data.addProperty("content", contentArray);
+
+        // 페이지네이션 참조
+        data.addProperty("pagination", new Schema<>().$ref("#/components/schemas/BasePaginationDto"));
+
+        root.addProperty("data", data);
+        mediaType.setSchema(root);
 
         responses.addApiResponse(successKey, apiResponse);
     }
@@ -352,6 +495,25 @@ public class SwaggerConfig {
         Class<?> dataType() default Object.class;
         String dataExample() default "";
         boolean isArray() default false;
+        int httpStatus() default 200;
+    }
+
+    // 페이지네이션 + 배열 예제를 위한 커스텀 어노테이션
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface ApiPagedSuccessResponse {
+        String message() default "요청이 성공적으로 처리되었습니다.";
+        String contentExample() default "[]"; // JSON 배열 문자열
+        String paginationExample() default "{\"limit\":10,\"currentPage\":1,\"totalPage\":5}"; // JSON 객체 문자열
+        int httpStatus() default 200;
+    }
+
+    // 페이지네이션 + DTO 스키마 기반 성공 응답(예시 없이 스키마만 구성)
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface ApiPagedSuccessSchema {
+        String message() default "요청이 성공적으로 처리되었습니다.";
+        Class<?> contentClass(); // content 배열 아이템 DTO 클래스
         int httpStatus() default 200;
     }
 }

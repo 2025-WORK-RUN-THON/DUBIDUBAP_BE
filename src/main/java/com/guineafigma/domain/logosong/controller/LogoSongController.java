@@ -10,6 +10,7 @@ import com.guineafigma.domain.logosong.service.IntegratedLogoSongService;
 import com.guineafigma.domain.logosong.service.MusicGenerationPollingService;
 import com.guineafigma.global.config.SwaggerConfig.ApiErrorExamples;
 import com.guineafigma.global.config.SwaggerConfig.ApiSuccessResponse;
+import com.guineafigma.global.config.SwaggerConfig.ApiPagedSuccessSchema;
 import com.guineafigma.global.config.security.CustomUserPrincipal;
 import com.guineafigma.global.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,11 +72,10 @@ public class LogoSongController {
                 "- size: 페이지 당 항목 수 (예: 10)\n" +
                 "- sort: 정렬 기준, 쉼표로 방향 지정 (예: createdAt,desc)"
     )
-    @ApiSuccessResponse(
+    @ApiPagedSuccessSchema(
             message = "전시회(공개) 목록 조회가 성공적으로 처리되었습니다.",
-            dataType = PagedResponse.class,
-            isArray = true,
-            dataExample = "{\n  'content': [\n    { 'id': 1, 'serviceName': '카페 뒤비뒤밥', 'likeCount': 12, 'isLiked': true },\n    { 'id': 2, 'serviceName': '분식 더밥', 'likeCount': 5, 'isLiked': null }\n  ],\n  'pagination': { 'limit': 10, 'currentPage': 1, 'totalPage': 5 }\n}"
+            contentClass = LogoSongResponse.class,
+            httpStatus = 200
     )
     @ApiErrorExamples({
             ErrorCode.INVALID_INPUT_VALUE
@@ -103,7 +103,11 @@ public class LogoSongController {
     @GetMapping("/popular")
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "인기 로고송 조회", description = "좋아요 수가 많은 순으로 로고송을 조회합니다.")
-    @ApiSuccessResponse(message = "인기 로고송 목록 조회가 성공적으로 처리되었습니다.", dataType = PagedResponse.class, isArray = true)
+    @ApiPagedSuccessSchema(
+            message = "인기 로고송 목록 조회가 성공적으로 처리되었습니다.",
+            contentClass = LogoSongResponse.class,
+            httpStatus = 200
+    )
     @ApiErrorExamples({
             ErrorCode.INVALID_INPUT_VALUE
     })
@@ -204,7 +208,11 @@ public class LogoSongController {
     @GetMapping("/my")
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "내 로고송 목록 조회", description = "현재 로그인한 사용자가 생성한 로고송 목록을 조회합니다.")
-    @ApiSuccessResponse(message = "내 로고송 목록 조회가 성공적으로 처리되었습니다.", dataType = PagedResponse.class, isArray = true)
+    @ApiPagedSuccessSchema(
+            message = "내 로고송 목록 조회가 성공적으로 처리되었습니다.",
+            contentClass = LogoSongResponse.class,
+            httpStatus = 200
+    )
     @ApiErrorExamples({
             ErrorCode.AUTHENTICATION_REQUIRED,
             ErrorCode.INVALID_TOKEN,
@@ -225,7 +233,11 @@ public class LogoSongController {
     @GetMapping("/my/liked")
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "좋아요한 로고송 목록 조회", description = "현재 로그인한 사용자가 좋아요한 로고송 목록을 조회합니다.")
-    @ApiSuccessResponse(message = "좋아요한 로고송 목록 조회가 성공적으로 처리되었습니다.", dataType = PagedResponse.class, isArray = true)
+    @ApiPagedSuccessSchema(
+            message = "좋아요한 로고송 목록 조회가 성공적으로 처리되었습니다.",
+            contentClass = LogoSongResponse.class,
+            httpStatus = 200
+    )
     @ApiErrorExamples({
             ErrorCode.AUTHENTICATION_REQUIRED,
             ErrorCode.INVALID_TOKEN,
