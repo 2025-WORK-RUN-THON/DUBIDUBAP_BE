@@ -347,6 +347,37 @@ public class LogoSongService {
         logoSongRepository.save(logoSong);
     }
 
+    @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
+    public void like(Long logoSongId, Long userId) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        boolean exists = logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSongId);
+        if (exists) {
+            return; // 멱등
+        }
+        LogoSongLike logoSongLike = LogoSongLike.builder()
+                .userId(userId)
+                .logosongId(logoSongId)
+                .build();
+        logoSongLikeRepository.save(logoSongLike);
+        logoSong.incrementLikeCount();
+        logoSongRepository.save(logoSong);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
+    public void unlike(Long logoSongId, Long userId) {
+        LogoSong logoSong = logoSongRepository.findById(logoSongId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        logoSongLikeRepository.findByUserIdAndLogosongId(userId, logoSongId)
+                .ifPresent(like -> {
+                    logoSongLikeRepository.delete(like);
+                    logoSong.decrementLikeCount();
+                });
+        logoSongRepository.save(logoSong);
+    }
+
     @Transactional(readOnly = true)
     public boolean isLikedByUser(Long logoSongId, Long userId) {
         return logoSongLikeRepository.existsByUserIdAndLogosongId(userId, logoSongId);
@@ -358,6 +389,20 @@ public class LogoSongService {
         LogoSong logoSong = logoSongRepository.findByIdAndUser_Id(logoSongId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
         logoSong.setVisibility(publicVisible);
+        if (introduction != null) {
+            logoSong.updateIntroduction(introduction);
+        }
+        logoSongRepository.save(logoSong);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"logosong:byId", "logosong:list", "logosong:popular"}, allEntries = true)
+    public void updatePartial(Long logoSongId, Boolean isPublic, String introduction, Long userId) {
+        LogoSong logoSong = logoSongRepository.findByIdAndUser_Id(logoSongId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGOSONG_NOT_FOUND));
+        if (isPublic != null) {
+            logoSong.setVisibility(isPublic);
+        }
         if (introduction != null) {
             logoSong.updateIntroduction(introduction);
         }

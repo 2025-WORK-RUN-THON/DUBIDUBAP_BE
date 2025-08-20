@@ -156,41 +156,46 @@ public class LogoSongController {
         return ApiResponse.successCreated(response);
     }
 
-    @PostMapping("/{id}/like")
+    @PutMapping("/{id}/like")
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "로고송 좋아요 토글", description = "로고송에 좋아요를 추가하거나 제거합니다.")
-    @ApiSuccessResponse(message = "좋아요 상태가 성공적으로 변경되었습니다.")
+    @Operation(summary = "로고송 좋아요 설정", description = "좋아요 버튼. true=좋아요, false=해제")
+    @ApiSuccessResponse(message = "좋아요 상태가 성공적으로 설정되었습니다.")
     @ApiErrorExamples({
             ErrorCode.AUTHENTICATION_REQUIRED,
             ErrorCode.INVALID_TOKEN,
             ErrorCode.LOGOSONG_NOT_FOUND,
             ErrorCode.USER_NOT_FOUND
     })
-    public ApiResponse<Void> toggleLike(
+    public ApiResponse<Void> setLike(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
+            @RequestParam("like") boolean like,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         if (userPrincipal == null) {
             return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-        logoSongService.toggleLike(id, userPrincipal.getId());
-        return ApiResponse.success(null);
+        if (like) {
+            logoSongService.like(id, userPrincipal.getId());
+        } else {
+            logoSongService.unlike(id, userPrincipal.getId());
+        }
+        return ApiResponse.success();
     }
 
-    @PostMapping("/{id}/visibility")
+    @PatchMapping("/{id}")
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "로고송 공개 여부/소개글 변경", description = "본인 로고송의 공개 여부를 변경하고, 선택적으로 전시 소개글(introduction)을 함께 저장합니다. 공개 여부 기본값은 비공개(false)입니다.")
-    @ApiSuccessResponse(message = "공개 여부가 성공적으로 변경되었습니다.")
+    @Operation(summary = "로고송 부분 업데이트(공개 여부/소개글)", description = "로고송의 공개 여부(isPublic)와 전시 소개글(introduction)을 부분 업데이트합니다. 둘 중 필요한 필드만 전송하면 됩니다.")
+    @ApiSuccessResponse(message = "로고송 정보가 성공적으로 수정되었습니다.")
     public ApiResponse<Void> updateVisibility(
             @Parameter(description = "로고송 ID") @PathVariable Long id,
-            @Parameter(description = "공개 여부", required = true) @RequestParam("public") boolean publicVisible,
-            @Parameter(description = "전시 소개글(선택)") @RequestParam(value = "introduction", required = false) String introduction,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "부분 업데이트 요청 바디")
+            @RequestBody(required = true) com.guineafigma.domain.logosong.dto.request.LogoSongUpdateRequest request,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         // 사용자 소유 검증 로직은 추후 userId가 모델에 포함될 때 강화 가능
         Long userId = userPrincipal != null ? userPrincipal.getId() : null;
         if (userId == null) {
             return ApiResponse.error(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-        logoSongService.updateVisibility(id, publicVisible, introduction, userId);
+        logoSongService.updatePartial(id, request.getIsPublic(), request.getIntroduction(), userId);
         return ApiResponse.success();
     }
 
