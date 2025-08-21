@@ -46,7 +46,7 @@ public class FastApiClient {
         body.put("industry", Optional.ofNullable(req.getIndustry()).orElse(""));
         body.put("marketing_item", Optional.ofNullable(req.getMarketingItem()).orElse(""));
         body.put("extra", Optional.ofNullable(req.getAdditionalInfo()).orElse(""));
-        body.put("generate_in", "spring");
+        body.put("generate_in", "fastapi");
         body.put("request_id", requestId);
 
         HttpHeaders headers = new HttpHeaders();
