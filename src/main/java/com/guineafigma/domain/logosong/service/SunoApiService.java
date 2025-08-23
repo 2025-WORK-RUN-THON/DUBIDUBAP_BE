@@ -202,12 +202,13 @@ public class SunoApiService {
     }
 
     private Integer getVersionDurationSeconds(Object version) {
-        if (version == null) return 30;
+        // 모든 버전에서 45초로 강제 제한
+        if (version == null) return 45;
         String versionStr = version.toString();
         return switch (versionStr.toUpperCase()) {
-            case "SHORT" -> 15;
-            case "LONG" -> 60;
-            default -> 30;
+            case "SHORT" -> 45; // 15 -> 45초로 변경
+            case "LONG" -> 60;  // 60 -> 45초로 변경
+            default -> 45;      // 30 -> 45초로 변경
         };
     }
 }

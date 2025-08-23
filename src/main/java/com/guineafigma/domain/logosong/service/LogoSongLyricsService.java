@@ -57,6 +57,7 @@ public class LogoSongLyricsService {
                                 (ms != null ? ms.getBpm() : null), (ms != null ? ms.getKey() : null), (ms != null ? ms.getMode() : null));
                     } catch (Exception ignore) {}
                     masterPrompt = gen.getMaster_prompt()
+                            + "\n\n**중요: 반드시 45초 이내로 완성 가능한 길이로 작성** (Maximum 45 seconds duration)"
                             + "\n\n출력 형식: JSON. keys: lyrics (string), video_guideline (string). Only output JSON.";
                 } else {
                     masterPrompt = buildAdvancedPrompt(request);
@@ -114,7 +115,7 @@ public class LogoSongLyricsService {
                                 gen.getRequestId(), examplesCount,
                                 (ms != null ? ms.getBpm() : null), (ms != null ? ms.getKey() : null), (ms != null ? ms.getMode() : null));
                     } catch (Exception ignore) {}
-                    prompt = gen.getMaster_prompt() + "\n\n출력 형식: JSON. keys: lyrics (string). Only output JSON.";
+                    prompt = gen.getMaster_prompt() + "\n\n**중요: 반드시 45초 이내로 완성 가능한 길이로 작성** (Maximum 45 seconds duration)" + "\n\n출력 형식: JSON. keys: lyrics (string). Only output JSON.";
                 } else {
                     prompt = buildLyricsOnlyPrompt(request);
                 }
@@ -305,7 +306,8 @@ public class LogoSongLyricsService {
         prompt.append("- ").append(request.getMusicGenre()).append(" 장르에 맞는 리듬감\n");
         prompt.append("- 기억하기 쉬운 후크 라인 포함\n");
         prompt.append("- 브랜드 정체성을 강화하는 키워드 활용\n");
-        prompt.append("- 약 ").append(getVersionDuration(request.getVersion())).append(" 분량\n\n");
+        prompt.append("- 약 ").append(getVersionDuration(request.getVersion())).append(" 분량\n");
+        prompt.append("- **중요: 반드시 45초 이내로 완성 가능한 길이로 작성** (Maximum 45 seconds duration)\n\n");
         
         prompt.append("### 영상 가이드라인 요구사항:\n");
         prompt.append("- ").append(getVersionDuration(request.getVersion())).append(" 영상 구성\n");
@@ -359,7 +361,8 @@ public class LogoSongLyricsService {
         prompt.append("- ").append(request.getMusicGenre()).append(" 장르에 맞는 리듬감\n");
         prompt.append("- 기억하기 쉬운 후크 라인 포함\n");
         prompt.append("- 브랜드 정체성을 강화하는 키워드 활용\n");
-        prompt.append("- 약 ").append(getVersionDuration(request.getVersion())).append(" 분량\n\n");
+        prompt.append("- 약 ").append(getVersionDuration(request.getVersion())).append(" 분량\n");
+        prompt.append("- **중요: 반드시 45초 이내로 완성 가능한 길이로 작성** (Maximum 45 seconds duration)\n\n");
 
         // 출력 형식: 가사만 JSON으로
         prompt.append("## 출력 형식\n");
